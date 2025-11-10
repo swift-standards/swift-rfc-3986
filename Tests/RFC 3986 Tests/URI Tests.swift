@@ -1,0 +1,309 @@
+import Foundation
+import Testing
+
+@testable import RFC_3986
+
+@Suite("URI Validation")
+struct URIValidationTests {
+
+    @Test("Valid HTTP URI")
+    func validHTTP() {
+        #expect(RFC_3986.isValidURI("https://example.com"))
+        #expect(RFC_3986.isValidURI("http://example.com/path"))
+        #expect(RFC_3986.isValidURI("https://example.com:8080/path?query=value"))
+    }
+
+    @Test("Valid HTTPS URI")
+    func validHTTPS() {
+        #expect(RFC_3986.isValidHTTP("https://example.com"))
+        #expect(RFC_3986.isValidHTTP("http://example.com"))
+        #expect(!RFC_3986.isValidHTTP("ftp://example.com"))
+    }
+
+    @Test("Valid URN URI")
+    func validURN() {
+        #expect(RFC_3986.isValidURI("urn:uuid:f81d4fae-7dec-11d0-a765-00a0c91e6bf6"))
+        #expect(RFC_3986.isValidURI("urn:isbn:0451450523"))
+    }
+
+    @Test("Valid mailto URI")
+    func validMailto() {
+        #expect(RFC_3986.isValidURI("mailto:user@example.com"))
+    }
+
+    @Test("Valid FTP URI")
+    func validFTP() {
+        #expect(RFC_3986.isValidURI("ftp://ftp.example.com/file.txt"))
+    }
+
+    @Test("Invalid URI - no scheme")
+    func invalidNoScheme() {
+        #expect(!RFC_3986.isValidURI("example.com"))
+        #expect(!RFC_3986.isValidURI("/path/to/resource"))
+    }
+
+    @Test("Invalid URI - empty string")
+    func invalidEmpty() {
+        #expect(!RFC_3986.isValidURI(""))
+    }
+
+    @Test("Invalid URI - non-ASCII characters")
+    func invalidNonASCII() {
+        // RFC 3986 requires ASCII-only characters
+        #expect(!RFC_3986.isValidURI("https://example.com/寿司"))
+        #expect(!RFC_3986.isValidURI("https://例え.jp"))
+    }
+
+    @Test("Valid URI - percent-encoded")
+    func validPercentEncoded() {
+        // Percent-encoded characters are valid ASCII
+        #expect(RFC_3986.isValidURI("https://example.com/%E5%AF%BF%E5%8F%B8"))
+    }
+}
+
+@Suite("URI Creation")
+struct URICreationTests {
+
+    @Test("Create URI from string literal")
+    func createFromLiteral() {
+        let uri: RFC_3986.URI = "https://example.com"
+        #expect(uri.value == "https://example.com")
+    }
+
+    @Test("Create URI with validation")
+    func createWithValidation() throws {
+        let string = "https://example.com/path"
+        let uri = try RFC_3986.URI(string)
+        #expect(uri.value == "https://example.com/path")
+    }
+
+    @Test("Create URI fails with invalid input")
+    func createFailsWithInvalid() {
+        let string = "not a uri"
+        #expect(throws: RFC_3986.Error.self) {
+            try RFC_3986.URI(string)
+        }
+    }
+
+    @Test("Create URI fails with non-ASCII")
+    func createFailsWithNonASCII() {
+        let string = "https://example.com/寿司"
+        #expect(throws: RFC_3986.Error.self) {
+            try RFC_3986.URI(string)
+        }
+    }
+}
+
+@Suite("URI Normalization")
+struct URINormalizationTests {
+
+    @Test("Normalize scheme to lowercase")
+    func normalizeScheme() throws {
+        let string = "HTTPS://example.com"
+        let uri = try RFC_3986.URI(string)
+        let normalized = uri.normalized()
+        #expect(normalized.value.hasPrefix("https://"))
+    }
+
+    @Test("Normalize host to lowercase")
+    func normalizeHost() throws {
+        let string = "https://EXAMPLE.COM"
+        let uri = try RFC_3986.URI(string)
+        let normalized = uri.normalized()
+        #expect(normalized.value.contains("example.com"))
+    }
+
+    @Test("Remove default HTTP port")
+    func removeDefaultHTTPPort() throws {
+        let string = "http://example.com:80/path"
+        let uri = try RFC_3986.URI(string)
+        let normalized = uri.normalized()
+        #expect(!normalized.value.contains(":80"))
+    }
+
+    @Test("Remove default HTTPS port")
+    func removeDefaultHTTPSPort() throws {
+        let string = "https://example.com:443/path"
+        let uri = try RFC_3986.URI(string)
+        let normalized = uri.normalized()
+        #expect(!normalized.value.contains(":443"))
+    }
+
+    @Test("Remove default FTP port")
+    func removeDefaultFTPPort() throws {
+        let string = "ftp://example.com:21/file.txt"
+        let uri = try RFC_3986.URI(string)
+        let normalized = uri.normalized()
+        #expect(!normalized.value.contains(":21"))
+    }
+
+    @Test("Keep non-default port")
+    func keepNonDefaultPort() throws {
+        let string = "https://example.com:8080/path"
+        let uri = try RFC_3986.URI(string)
+        let normalized = uri.normalized()
+        #expect(normalized.value.contains(":8080"))
+    }
+
+    @Test("Remove dot segments from path")
+    func removeDotSegments() throws {
+        let string = "https://example.com/a/b/c/./../../g"
+        let uri = try RFC_3986.URI(string)
+        let normalized = uri.normalized()
+        #expect(normalized.value.contains("/a/g"))
+    }
+
+    @Test("Remove leading dot segment")
+    func removeLeadingDot() throws {
+        let string = "https://example.com/./a/b"
+        let uri = try RFC_3986.URI(string)
+        let normalized = uri.normalized()
+        #expect(normalized.value.contains("/a/b"))
+    }
+
+    @Test("Remove double dot segments")
+    func removeDoubleDots() throws {
+        let string = "https://example.com/a/../b"
+        let uri = try RFC_3986.URI(string)
+        let normalized = uri.normalized()
+        #expect(normalized.value.contains("/b"))
+        #expect(!normalized.value.contains("/a/"))
+    }
+}
+
+@Suite("URI Component Parsing")
+struct URIComponentParsingTests {
+
+    @Test("Parse scheme")
+    func parseScheme() throws {
+        let string = "https://example.com"
+        let uri = try RFC_3986.URI(string)
+        #expect(uri.scheme == "https")
+    }
+
+    @Test("Parse host")
+    func parseHost() throws {
+        let string = "https://example.com/path"
+        let uri = try RFC_3986.URI(string)
+        #expect(uri.host == "example.com")
+    }
+
+    @Test("Parse port")
+    func parsePort() throws {
+        let string = "https://example.com:8080/path"
+        let uri = try RFC_3986.URI(string)
+        #expect(uri.port == 8080)
+    }
+
+    @Test("Parse path")
+    func parsePath() throws {
+        let string = "https://example.com/path/to/resource"
+        let uri = try RFC_3986.URI(string)
+        #expect(uri.path == "/path/to/resource")
+    }
+
+    @Test("Parse query")
+    func parseQuery() throws {
+        let string = "https://example.com/path?key=value&foo=bar"
+        let uri = try RFC_3986.URI(string)
+        #expect(uri.query == "key=value&foo=bar")
+    }
+
+    @Test("Parse fragment")
+    func parseFragment() throws {
+        let string = "https://example.com/path#section"
+        let uri = try RFC_3986.URI(string)
+        #expect(uri.fragment == "section")
+    }
+
+    @Test("Parse all components")
+    func parseAllComponents() throws {
+        let string = "https://example.com:8080/path?query=value#section"
+        let uri = try RFC_3986.URI(string)
+        #expect(uri.scheme == "https")
+        #expect(uri.host == "example.com")
+        #expect(uri.port == 8080)
+        #expect(uri.path == "/path")
+        #expect(uri.query == "query=value")
+        #expect(uri.fragment == "section")
+    }
+}
+
+@Suite("URL Conformance to URI.Representable")
+struct URLURIConformanceTests {
+
+    @Test("URL conforms to URI.Representable")
+    func urlConformsToURI() {
+        let url = URL(string: "https://example.com/path")!
+        let uri: any RFC_3986.URI.Representable = url
+        #expect(uri.uriString == "https://example.com/path")
+    }
+
+    @Test("URL with percent-encoded characters")
+    func urlWithPercentEncoded() {
+        let url = URL(string: "https://example.com/%E5%AF%BF%E5%8F%B8")!
+        #expect(url.uriString.contains("%E5%AF%BF%E5%8F%B8"))
+    }
+
+    @Test("URL can be validated as HTTP URI")
+    func urlValidation() {
+        let httpURL = URL(string: "https://example.com")!
+        let ftpURL = URL(string: "ftp://example.com")!
+
+        #expect(RFC_3986.isValidHTTP(httpURL))
+        #expect(!RFC_3986.isValidHTTP(ftpURL))
+    }
+}
+
+@Suite("Path Normalization Algorithm")
+struct PathNormalizationTests {
+
+    @Test("Remove single dot")
+    func removeSingleDot() {
+        let input = "/a/./b"
+        let output = RFC_3986.removeDotSegments(from: input)
+        #expect(output == "/a/b")
+    }
+
+    @Test("Remove double dots")
+    func removeDoubleDots() {
+        let input = "/a/b/../c"
+        let output = RFC_3986.removeDotSegments(from: input)
+        #expect(output == "/a/c")
+    }
+
+    @Test("Complex path normalization")
+    func complexNormalization() {
+        let input = "/a/b/c/./../../g"
+        let output = RFC_3986.removeDotSegments(from: input)
+        #expect(output == "/a/g")
+    }
+
+    @Test("Leading dots")
+    func leadingDots() {
+        let input = "../a/b"
+        let output = RFC_3986.removeDotSegments(from: input)
+        #expect(output == "a/b")
+    }
+
+    @Test("Trailing dot")
+    func trailingDot() {
+        let input = "/a/b/."
+        let output = RFC_3986.removeDotSegments(from: input)
+        #expect(output == "/a/b/")
+    }
+
+    @Test("RFC 3986 Example 1")
+    func rfc3986Example1() {
+        let input = "/a/b/c/./../../g"
+        let output = RFC_3986.removeDotSegments(from: input)
+        #expect(output == "/a/g")
+    }
+
+    @Test("RFC 3986 Example 2")
+    func rfc3986Example2() {
+        let input = "mid/content=5/../6"
+        let output = RFC_3986.removeDotSegments(from: input)
+        #expect(output == "mid/6")
+    }
+}
