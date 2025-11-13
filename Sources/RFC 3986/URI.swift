@@ -102,10 +102,23 @@ extension RFC_3986 {
             self.value = value
         }
 
-        /// Creates a URI from a string without validation (for internal use)
+        /// Creates a URI from a string without validation
         ///
-        /// - Parameter value: The URI string
-        internal init(unchecked value: String) {
+        /// Use this initializer when you have a string that is already known to be
+        /// a valid URI reference (e.g., from RFC 6570 template expansion or from
+        /// trusted sources).
+        ///
+        /// - Warning: This does not perform validation. Use the throwing `init(_:)`
+        ///   for untrusted input.
+        ///
+        /// - Parameter value: The URI reference string (should be valid, but not validated)
+        ///
+        /// Example:
+        /// ```swift
+        /// // From trusted source (RFC 6570 expansion)
+        /// let uri = RFC_3986.URI(unchecked: "/users/123")
+        /// ```
+        public init(unchecked value: String) {
             self.value = value
         }
 
