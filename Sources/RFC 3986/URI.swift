@@ -1,5 +1,3 @@
-import Foundation
-
 extension RFC_3986 {
     /// Errors that can occur when working with URIs
     public enum Error: Swift.Error, Hashable, Sendable {
@@ -14,41 +12,15 @@ extension RFC_3986 {
     }
 }
 
-extension RFC_3986.Error: LocalizedError {
-    public var errorDescription: String? {
+extension RFC_3986.Error: CustomStringConvertible {
+    public var description: String {
         switch self {
         case .invalidURI(let value):
-            return
-                "Invalid URI: '\(value)'. URIs must have a scheme and contain only ASCII characters."
+            return "Invalid URI: '\(value)'. URIs must follow RFC 3986 syntax and contain only ASCII characters."
         case .invalidComponent(let component):
             return "Invalid URI component: '\(component)'"
         case .conversionFailed(let reason):
             return "URI conversion failed: \(reason)"
-        }
-    }
-
-    public var failureReason: String? {
-        switch self {
-        case .invalidURI:
-            return "The string does not conform to RFC 3986 URI syntax"
-        case .invalidComponent:
-            return "The component contains invalid characters or structure"
-        case .conversionFailed:
-            return "The operation could not be completed"
-        }
-    }
-
-    public var recoverySuggestion: String? {
-        switch self {
-        case .invalidURI(let value) where value.contains(where: { !$0.isASCII }):
-            return
-                "Use percent-encoding for non-ASCII characters, or consider using RFC 3987 (IRI) instead"
-        case .invalidURI:
-            return "Ensure the URI includes a scheme (e.g., https://) and follows RFC 3986 syntax"
-        case .invalidComponent:
-            return "Check that the component follows RFC 3986 requirements for its type"
-        case .conversionFailed:
-            return "Verify the input is well-formed and try again"
         }
     }
 }
@@ -59,7 +31,7 @@ extension RFC_3986 {
     /// Protocol for types that can represent URIs
     ///
     /// Types conforming to this protocol can be used interchangeably wherever a URI
-    /// is expected, including Foundation's `URL` type.
+    /// is expected.
     ///
     /// Example:
     /// ```swift
@@ -67,8 +39,8 @@ extension RFC_3986 {
     ///     print(uri.uri.value)
     /// }
     ///
-    /// let url = URL(string: "https://example.com")!
-    /// process(uri: url)  // Works!
+    /// let uri = try RFC_3986.URI("https://example.com")
+    /// process(uri: uri)  // Works!
     /// ```
     public protocol URIRepresentable {
         /// The URI representation
@@ -675,17 +647,8 @@ extension RFC_3986.URI {
                     result += "/\(refPath)"
                 }
             }
-            // Remove dot segments
-            if let lastSchemeColon = result.lastIndex(of: ":") {
-                let pathStart = result.index(after: lastSchemeColon)
-                if let pathStartAfterAuthority = result[pathStart...].range(of: "//")?.upperBound {
-                    if let pathBeginning = result[pathStartAfterAuthority...].firstIndex(of: "/") {
-                        let pathPart = String(result[pathBeginning...])
-                        let normalized = RFC_3986.removeDotSegments(from: pathPart)
-                        result = String(result[..<pathBeginning]) + normalized
-                    }
-                }
-            }
+            // Remove dot segments from the merged path
+            result = RFC_3986.removeDotSegments(from: result)
         } else if let basePath = path {
             result += basePath.string
         }
@@ -906,18 +869,6 @@ extension RFC_3986.URI {
 extension RFC_3986.URI: RFC_3986.URIRepresentable {
     public var uri: RFC_3986.URI {
         self
-    }
-}
-
-// MARK: - Foundation URL Conformance
-
-extension URL: RFC_3986.URIRepresentable {
-    /// The URL as a URI
-    ///
-    /// Foundation's URL type uses percent-encoding for non-ASCII characters,
-    /// making it compatible with URIs as defined in RFC 3986.
-    public var uri: RFC_3986.URI {
-        RFC_3986.URI(unchecked: absoluteString)
     }
 }
 

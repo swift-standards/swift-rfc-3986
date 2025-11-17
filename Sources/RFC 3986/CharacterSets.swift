@@ -97,7 +97,13 @@ extension RFC_3986 {
             } else {
                 // Encode each UTF-8 byte
                 for byte in String(character).utf8 {
-                    result.append(String(format: "%%%02X", byte))
+                    // Convert byte to hex manually
+                    let hex = String(byte, radix: 16, uppercase: true)
+                    result.append("%")
+                    if hex.count == 1 {
+                        result.append("0")
+                    }
+                    result.append(hex)
                 }
             }
         }
@@ -146,11 +152,10 @@ extension RFC_3986 {
                         }
 
                         // Try to decode UTF-8
-                        if let decoded = String(bytes: bytes, encoding: .utf8) {
-                            result.append(contentsOf: decoded)
-                            index = currentIndex
-                            continue
-                        }
+                        let decoded = String(decoding: bytes, as: UTF8.self)
+                        result.append(contentsOf: decoded)
+                        index = currentIndex
+                        continue
                     }
                 }
             }
