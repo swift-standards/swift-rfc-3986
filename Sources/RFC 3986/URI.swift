@@ -116,43 +116,155 @@ extension RFC_3986.URI {
     /// - Multiple URI copies share the same cache (COW-like behavior)
     fileprivate final class Cache: @unchecked Sendable {
         let value: String
-        let urlComponents: URLComponents?
+        let components: ParsedComponents
 
         // Lazy cached components - parsed once on first access
         lazy var scheme: Scheme? = {
-            urlComponents?.scheme.flatMap { try? Scheme($0) }
+            components.scheme.flatMap { try? Scheme($0) }
         }()
 
         lazy var host: Host? = {
-            urlComponents?.host.flatMap { try? Host($0) }
+            components.host.flatMap { try? Host($0) }
         }()
 
         lazy var port: Port? = {
-            urlComponents?.port.flatMap { Port(UInt16($0)) }
+            components.port.flatMap { Port($0) }
         }()
 
         lazy var path: Path? = {
-            guard let pathString = urlComponents?.path else { return nil }
+            guard let pathString = components.path, !pathString.isEmpty else { return nil }
             return try? Path(pathString)
         }()
 
         lazy var query: Query? = {
-            urlComponents?.query.flatMap { try? Query($0) }
+            components.query.flatMap { try? Query($0) }
         }()
 
         lazy var fragment: Fragment? = {
-            urlComponents?.fragment.flatMap { try? Fragment($0) }
+            components.fragment.flatMap { try? Fragment($0) }
         }()
 
         init(value: String) {
             self.value = value
+            self.components = Self.parseURI(value)
+        }
 
-            // Parse URLComponents once at initialization
-            if let url = URL(string: value) {
-                self.urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: false)
-            } else {
-                self.urlComponents = nil
+        /// Parses a URI string according to RFC 3986 Appendix B
+        ///
+        /// Uses the regex from RFC 3986 Appendix B:
+        /// ^(([^:/?#]+):)?(//([^/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?
+        ///
+        /// Groups:
+        /// - 2: scheme
+        /// - 4: authority
+        /// - 5: path
+        /// - 7: query
+        /// - 9: fragment
+        private static func parseURI(_ uri: String) -> ParsedComponents {
+            var scheme: String?
+            var authority: String?
+            var path: String?
+            var query: String?
+            var fragment: String?
+
+            var remaining = uri
+
+            // Parse fragment: #(.*)
+            if let fragmentIndex = remaining.lastIndex(of: "#") {
+                fragment = String(remaining[remaining.index(after: fragmentIndex)...])
+                remaining = String(remaining[..<fragmentIndex])
             }
+
+            // Parse query: \?([^#]*)
+            if let queryIndex = remaining.lastIndex(of: "?") {
+                query = String(remaining[remaining.index(after: queryIndex)...])
+                remaining = String(remaining[..<queryIndex])
+            }
+
+            // Parse scheme: ([^:/?#]+):
+            if let colonIndex = remaining.firstIndex(of: ":"),
+               colonIndex > remaining.startIndex {
+                let schemeCandidate = String(remaining[..<colonIndex])
+                // Verify no /, ?, or # appear before the colon
+                if !schemeCandidate.contains("/") &&
+                   !schemeCandidate.contains("?") &&
+                   !schemeCandidate.contains("#") {
+                    scheme = schemeCandidate
+                    remaining = String(remaining[remaining.index(after: colonIndex)...])
+                }
+            }
+
+            // Parse authority: //([^/?#]*)
+            if remaining.hasPrefix("//") {
+                let afterSlashes = remaining.index(remaining.startIndex, offsetBy: 2)
+                var authorityEnd = remaining.endIndex
+
+                // Find the first /, ?, or # after //
+                for char in ["/", "?", "#"] {
+                    if let index = remaining[afterSlashes...].firstIndex(of: Character(char)) {
+                        if index < authorityEnd {
+                            authorityEnd = index
+                        }
+                    }
+                }
+
+                authority = String(remaining[afterSlashes..<authorityEnd])
+                remaining = String(remaining[authorityEnd...])
+            }
+
+            // What remains is the path
+            if !remaining.isEmpty {
+                path = remaining
+            }
+
+            // Parse authority into host and port
+            var host: String?
+            var port: UInt16?
+            if let auth = authority {
+                (host, port) = parseAuthority(auth)
+            }
+
+            return ParsedComponents(
+                scheme: scheme,
+                host: host,
+                port: port,
+                path: path,
+                query: query,
+                fragment: fragment
+            )
+        }
+
+        /// Parses authority into host and port
+        /// authority = [ userinfo "@" ] host [ ":" port ]
+        private static func parseAuthority(_ authority: String) -> (host: String?, port: UInt16?) {
+            var remaining = authority
+
+            // Skip userinfo if present (everything before @)
+            if let atIndex = remaining.lastIndex(of: "@") {
+                remaining = String(remaining[remaining.index(after: atIndex)...])
+            }
+
+            // Check for port (: followed by digits at the end)
+            if let colonIndex = remaining.lastIndex(of: ":") {
+                let hostPart = String(remaining[..<colonIndex])
+                let portPart = String(remaining[remaining.index(after: colonIndex)...])
+
+                if let portValue = UInt16(portPart) {
+                    return (hostPart.isEmpty ? nil : hostPart, portValue)
+                }
+            }
+
+            return (remaining.isEmpty ? nil : remaining, nil)
+        }
+
+        /// Temporary struct to hold parsed URI components
+        struct ParsedComponents {
+            let scheme: String?
+            let host: String?
+            let port: UInt16?
+            let path: String?
+            let query: String?
+            let fragment: String?
         }
     }
 }
@@ -175,7 +287,7 @@ extension RFC_3986.URI {
     /// Creates a URI from a string without validation
     ///
     /// This is an internal optimization for cases where validation has already
-    /// been performed (e.g., after URLComponents validation, or for static constants).
+    /// been performed (e.g., for static constants or when the string is known to be valid).
     ///
     /// - Warning: This does not perform validation. For public use, use `try!` with
     ///   the throwing initializer to make the risk explicit.
@@ -247,15 +359,6 @@ extension RFC_3986.URI {
 // MARK: - Component Properties
 
 extension RFC_3986.URI {
-    /// The components of this URI
-    ///
-    /// Returns the parsed URI components including scheme, authority, path, query, and fragment.
-    ///
-    /// - Returns: URLComponents if the URI can be parsed, nil otherwise
-    public var components: URLComponents? {
-        cache.urlComponents
-    }
-
     /// The scheme component of this URI
     ///
     /// Per RFC 3986 Section 3.1, the scheme is the first component of a URI
@@ -279,16 +382,39 @@ extension RFC_3986.URI {
     /// for security reasons (passwords in URIs are insecure), but is still
     /// part of the URI syntax for compatibility.
     public var userinfo: Userinfo? {
-        guard let urlComponents = cache.urlComponents else { return nil }
+        // Parse userinfo from the full authority section
+        // authority = [ userinfo "@" ] host [ ":" port ]
+        // We need to re-parse the original URI to extract userinfo
 
-        // URLComponents stores user and password separately
-        return urlComponents.user
-            .map { user in
-                urlComponents.password
-                    .map { "\(user):\($0)" }
-                    ?? user
+        // Find the authority section (between // and the next /, ?, or #)
+        var remaining = cache.value
+
+        // Skip scheme if present
+        if let colonIndex = remaining.firstIndex(of: ":") {
+            remaining = String(remaining[remaining.index(after: colonIndex)...])
+        }
+
+        // Check for authority (starts with //)
+        guard remaining.hasPrefix("//") else { return nil }
+        let afterSlashes = remaining.index(remaining.startIndex, offsetBy: 2)
+        var authorityEnd = remaining.endIndex
+
+        // Find the end of authority
+        for char in ["/", "?", "#"] {
+            if let index = remaining[afterSlashes...].firstIndex(of: Character(char)) {
+                if index < authorityEnd {
+                    authorityEnd = index
+                }
             }
-            .flatMap { try? Userinfo.init($0) }
+        }
+
+        let authority = String(remaining[afterSlashes..<authorityEnd])
+
+        // Extract userinfo (everything before @)
+        guard let atIndex = authority.firstIndex(of: "@") else { return nil }
+        let userinfoString = String(authority[..<atIndex])
+
+        return try? Userinfo(userinfoString)
     }
 
     /// The host component of this URI
@@ -407,45 +533,60 @@ extension RFC_3986.URI {
     ///
     /// - Returns: A normalized URI
     public func normalized() -> RFC_3986.URI {
-        guard let url = URL(string: value) else {
-            return self
-        }
-
-        // Foundation's URL automatically performs many normalizations
-        // when created, so we can use its normalized representation
-        guard var components = URLComponents(url: url, resolvingAgainstBaseURL: false) else {
-            return self
-        }
-
-        // Normalize scheme and host to lowercase (Section 6.2.2.1)
-        if let scheme = components.scheme {
-            components.scheme = scheme.lowercased()
-        }
-        if let host = components.host {
-            components.host = host.lowercased()
-        }
+        // Get components
+        let normalizedScheme = scheme?.value.lowercased()
+        let normalizedHost = host?.rawValue.lowercased()
+        var normalizedPort = port
+        var normalizedPath = path?.string
+        var normalizedQuery = query?.string
+        let normalizedFragment = fragment?.value
 
         // Remove default ports
-        if let scheme = components.scheme, let port = components.port {
-            let defaultPort =
-                (scheme == "http" && port == 80) || (scheme == "https" && port == 443)
-                || (scheme == "ftp" && port == 21)
-            if defaultPort {
-                components.port = nil
+        if let scheme = normalizedScheme, let port = normalizedPort {
+            let isDefaultPort =
+                (scheme == "http" && port == 80) ||
+                (scheme == "https" && port == 443) ||
+                (scheme == "ftp" && port == 21)
+            if isDefaultPort {
+                normalizedPort = nil
             }
         }
 
         // Normalize path by removing dot segments (Section 6.2.2.3)
-        let path = components.path
-        if !path.isEmpty {
-            components.path = RFC_3986.removeDotSegments(from: path)
+        if let pathString = normalizedPath, !pathString.isEmpty {
+            normalizedPath = RFC_3986.removeDotSegments(from: pathString)
         }
 
-        guard let normalizedURL = components.url else {
-            return self
+        // Normalize percent-encoding (Section 6.2.2.2)
+        if let pathString = normalizedPath {
+            normalizedPath = RFC_3986.normalizePercentEncoding(pathString)
+        }
+        if let queryString = normalizedQuery {
+            normalizedQuery = RFC_3986.normalizePercentEncoding(queryString)
         }
 
-        return RFC_3986.URI(unchecked: normalizedURL.absoluteString)
+        // Reconstruct URI
+        var result = ""
+        if let scheme = normalizedScheme {
+            result += "\(scheme):"
+        }
+        if let host = normalizedHost {
+            result += "//\(host)"
+            if let port = normalizedPort {
+                result += ":\(port)"
+            }
+        }
+        if let path = normalizedPath {
+            result += path
+        }
+        if let query = normalizedQuery {
+            result += "?\(query)"
+        }
+        if let fragment = normalizedFragment {
+            result += "#\(fragment)"
+        }
+
+        return RFC_3986.URI(unchecked: result)
     }
 
     /// Resolves a relative URI reference against this URI as a base
@@ -469,29 +610,96 @@ extension RFC_3986.URI {
     /// - Returns: The resolved absolute URI
     /// - Throws: RFC_3986.Error if resolution fails
     public func resolve(_ reference: String) throws -> RFC_3986.URI {
-        guard components != nil else {
-            throw RFC_3986.Error.invalidURI(value)
+        // TODO: Implement full RFC 3986 Section 5 resolution algorithm
+        // For now, this is a simplified implementation
+
+        let refURI = try RFC_3986.URI(reference)
+
+        // If reference has a scheme, it's absolute - return it as-is
+        if refURI.scheme != nil {
+            return refURI
         }
 
-        guard let url = URL(string: value) else {
-            throw RFC_3986.Error.invalidURI(value)
+        // If reference has authority, use base scheme + reference authority/path/query
+        if refURI.host != nil {
+            var result = ""
+            if let baseScheme = scheme {
+                result += "\(baseScheme.value):"
+            }
+            result += "//"
+            if let refHost = refURI.host {
+                result += refHost.rawValue
+            }
+            if let refPort = refURI.port {
+                result += ":\(refPort)"
+            }
+            if let refPath = refURI.path {
+                result += refPath.string
+            }
+            if let refQuery = refURI.query {
+                result += "?\(refQuery.string)"
+            }
+            if let refFragment = refURI.fragment {
+                result += "#\(refFragment.value)"
+            }
+            return RFC_3986.URI(unchecked: result)
         }
 
-        // Try to create a URL from the reference, resolving against base
-        guard let resolvedURL = URL(string: reference, relativeTo: url) else {
-            throw RFC_3986.Error.invalidURI(reference)
+        // Reference has no scheme or authority - merge paths
+        var result = ""
+        if let baseScheme = scheme {
+            result += "\(baseScheme.value):"
+        }
+        if let baseHost = host {
+            result += "//\(baseHost.rawValue)"
+            if let basePort = port {
+                result += ":\(basePort)"
+            }
         }
 
-        // Get the absolute string
-        guard let absoluteString = resolvedURL.absoluteString.split(separator: "#").first else {
-            throw RFC_3986.Error.invalidURI(reference)
+        // Merge paths according to RFC 3986 Section 5.2.3
+        let refPath = refURI.path?.string
+        if let refPath = refPath, !refPath.isEmpty {
+            if refPath.hasPrefix("/") {
+                // Absolute path - use reference path as-is
+                result += refPath
+            } else {
+                // Relative path - merge with base
+                if let basePath = path?.string {
+                    // Remove last segment from base path
+                    if let lastSlash = basePath.lastIndex(of: "/") {
+                        result += String(basePath[...lastSlash])
+                    }
+                    result += refPath
+                } else {
+                    result += "/\(refPath)"
+                }
+            }
+            // Remove dot segments
+            if let lastSchemeColon = result.lastIndex(of: ":") {
+                let pathStart = result.index(after: lastSchemeColon)
+                if let pathStartAfterAuthority = result[pathStart...].range(of: "//")?.upperBound {
+                    if let pathBeginning = result[pathStartAfterAuthority...].firstIndex(of: "/") {
+                        let pathPart = String(result[pathBeginning...])
+                        let normalized = RFC_3986.removeDotSegments(from: pathPart)
+                        result = String(result[..<pathBeginning]) + normalized
+                    }
+                }
+            }
+        } else if let basePath = path {
+            result += basePath.string
         }
 
-        var result = String(absoluteString)
+        // Use reference query if present, otherwise use base query
+        if let refQuery = refURI.query {
+            result += "?\(refQuery.string)"
+        } else if refPath == nil, let baseQuery = query {
+            result += "?\(baseQuery.string)"
+        }
 
-        // If the reference had a fragment, preserve it
-        if let fragmentIndex = reference.firstIndex(of: "#") {
-            result += String(reference[fragmentIndex...])
+        // Always use reference fragment
+        if let refFragment = refURI.fragment {
+            result += "#\(refFragment.value)"
         }
 
         return RFC_3986.URI(unchecked: result)
@@ -506,19 +714,35 @@ extension RFC_3986.URI {
     /// - Parameter component: The path component to append
     /// - Returns: A new URI with the appended path component
     public func appendingPathComponent(_ component: String) throws -> RFC_3986.URI {
-        guard var urlComponents = components else {
-            throw RFC_3986.Error.invalidURI(value)
+        var result = ""
+
+        // Add scheme
+        if let uriScheme = scheme {
+            result += "\(uriScheme.value):"
         }
 
-        let currentPath = urlComponents.path
+        // Add authority
+        if let uriHost = host {
+            result += "//\(uriHost.rawValue)"
+            if let uriPort = port {
+                result += ":\(uriPort)"
+            }
+        }
+
+        // Append to path
+        let currentPath = path?.string ?? ""
         let separator = currentPath.hasSuffix("/") ? "" : "/"
-        urlComponents.path = currentPath + separator + component
+        result += currentPath + separator + component
 
-        guard let url = urlComponents.url else {
-            throw RFC_3986.Error.conversionFailed("Could not append path component")
+        // Add query and fragment
+        if let uriQuery = query {
+            result += "?\(uriQuery.string)"
+        }
+        if let uriFragment = fragment {
+            result += "#\(uriFragment.value)"
         }
 
-        return RFC_3986.URI(unchecked: url.absoluteString)
+        return try RFC_3986.URI(result)
     }
 
     /// Creates a new URI by appending a query parameter
@@ -528,19 +752,48 @@ extension RFC_3986.URI {
     ///   - value: The query parameter value
     /// - Returns: A new URI with the appended query parameter
     public func appendingQueryItem(name: String, value: String?) throws -> RFC_3986.URI {
-        guard var urlComponents = components else {
-            throw RFC_3986.Error.invalidURI(self.value)
+        var result = ""
+
+        // Add scheme
+        if let uriScheme = scheme {
+            result += "\(uriScheme.value):"
         }
 
-        var queryItems = urlComponents.queryItems ?? []
-        queryItems.append(URLQueryItem(name: name, value: value))
-        urlComponents.queryItems = queryItems
-
-        guard let url = urlComponents.url else {
-            throw RFC_3986.Error.conversionFailed("Could not append query item")
+        // Add authority
+        if let uriHost = host {
+            result += "//\(uriHost.rawValue)"
+            if let uriPort = port {
+                result += ":\(uriPort)"
+            }
         }
 
-        return RFC_3986.URI(unchecked: url.absoluteString)
+        // Add path
+        if let uriPath = path {
+            result += uriPath.string
+        }
+
+        // Add query with new item
+        let encodedName = RFC_3986.percentEncode(name, allowing: RFC_3986.CharacterSets.query)
+        let encodedValue = value.map { RFC_3986.percentEncode($0, allowing: RFC_3986.CharacterSets.query) }
+
+        if let currentQuery = query?.string {
+            result += "?\(currentQuery)&\(encodedName)"
+            if let value = encodedValue {
+                result += "=\(value)"
+            }
+        } else {
+            result += "?\(encodedName)"
+            if let value = encodedValue {
+                result += "=\(value)"
+            }
+        }
+
+        // Add fragment
+        if let uriFragment = fragment {
+            result += "#\(uriFragment.value)"
+        }
+
+        return try RFC_3986.URI(result)
     }
 
     /// Creates a new URI by setting the fragment
@@ -548,17 +801,37 @@ extension RFC_3986.URI {
     /// - Parameter fragment: The fragment to set
     /// - Returns: A new URI with the specified fragment
     public func settingFragment(_ fragment: Fragment?) throws -> RFC_3986.URI {
-        guard var urlComponents = components else {
-            throw RFC_3986.Error.invalidURI(value)
+        var result = ""
+
+        // Add scheme
+        if let uriScheme = scheme {
+            result += "\(uriScheme.value):"
         }
 
-        urlComponents.fragment = fragment?.value
-
-        guard let url = urlComponents.url else {
-            throw RFC_3986.Error.conversionFailed("Could not set fragment")
+        // Add authority
+        if let uriHost = host {
+            result += "//\(uriHost.rawValue)"
+            if let uriPort = port {
+                result += ":\(uriPort)"
+            }
         }
 
-        return RFC_3986.URI(unchecked: url.absoluteString)
+        // Add path
+        if let uriPath = path {
+            result += uriPath.string
+        }
+
+        // Add query
+        if let uriQuery = query {
+            result += "?\(uriQuery.string)"
+        }
+
+        // Add new fragment
+        if let newFragment = fragment {
+            result += "#\(newFragment.value)"
+        }
+
+        return try RFC_3986.URI(result)
     }
 }
 
@@ -819,8 +1092,8 @@ extension RFC_3986 {
     /// - Parameter uri: The URI to validate
     /// - Returns: true if the URI is an HTTP or HTTPS URI
     public static func isValidHTTP(_ uri: any URIRepresentable) -> Bool {
-        guard let url = URL(string: uri.uri.value) else { return false }
-        return url.scheme == "http" || url.scheme == "https"
+        guard let scheme = uri.uri.scheme else { return false }
+        return scheme.value == "http" || scheme.value == "https"
     }
 
     /// Validates if a string is a valid HTTP(S) URI
@@ -829,7 +1102,7 @@ extension RFC_3986 {
     /// - Returns: true if the string is an HTTP or HTTPS URI
     public static func isValidHTTP(_ string: String) -> Bool {
         guard isValidURI(string) else { return false }
-        guard let url = URL(string: string) else { return false }
-        return url.scheme == "http" || url.scheme == "https"
+        guard let uri = try? URI(string) else { return false }
+        return uri.scheme?.value == "http" || uri.scheme?.value == "https"
     }
 }
