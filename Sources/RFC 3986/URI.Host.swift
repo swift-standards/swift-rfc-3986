@@ -167,7 +167,7 @@ extension RFC_3986.URI.Host {
     /// reg-name = *( unreserved / pct-encoded / sub-delims )
     private static func isValidRegisteredName(_ string: String) -> Bool {
         // Allow unreserved chars, percent-encoded, and sub-delims
-        let validChars = RFC_3986.CharacterSets.host.union(["%"])
+        let validChars = RFC_3986.CharacterSet.host.union(.init(Set(["%"])))
 
         return string.allSatisfy { validChars.contains($0) }
     }

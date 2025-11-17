@@ -57,7 +57,7 @@ extension RFC_3986.URI.Scheme {
         }
 
         // Validate all characters are valid scheme characters
-        guard value.allSatisfy({ RFC_3986.CharacterSets.scheme.contains($0) }) else {
+        guard value.allSatisfy({ RFC_3986.CharacterSet.scheme.contains($0) }) else {
             throw RFC_3986.Error.invalidComponent(
                 "Scheme contains invalid characters. Only letters, digits, +, -, and . are allowed"
             )

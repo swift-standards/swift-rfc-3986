@@ -115,7 +115,7 @@ extension RFC_3986.URI.Userinfo {
     /// - Throws: `RFC_3986.Error` if the userinfo contains invalid characters
     private static func validate(_ string: String) throws {
         // Build allowed character set (userinfo characters plus % for percent-encoding)
-        let allowedChars = RFC_3986.CharacterSets.userinfo.union(["%"])
+        let allowedChars = RFC_3986.CharacterSet.userinfo.characters.union(["%"])
 
         // Check for any characters not in the allowed set
         if let invalidChar = string.first(where: { !allowedChars.contains($0) }) {

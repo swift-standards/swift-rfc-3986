@@ -1,4 +1,4 @@
-// swift-tools-version: 6.0
+// swift-tools-version: 6.2
 
 import PackageDescription
 
@@ -16,9 +16,15 @@ let package = Package(
             targets: ["RFC 3986"]
         )
     ],
+    dependencies: [
+        .package(path: "../swift-standards")
+    ],
     targets: [
         .target(
-            name: "RFC 3986"
+            name: "RFC 3986",
+            dependencies: [
+                .product(name: "Standards", package: "swift-standards")
+            ]
         ),
         .testTarget(
             name: "RFC 3986 Tests",

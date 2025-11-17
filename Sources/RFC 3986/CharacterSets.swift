@@ -1,81 +1,159 @@
+import Standards
+
 extension RFC_3986 {
     /// Character sets defined in RFC 3986
-    public enum CharacterSets {
-        /// Unreserved characters per RFC 3986 Section 2.3
-        ///
-        /// Characters that can appear unencoded in URIs:
-        /// `A-Z a-z 0-9 - . _ ~`
-        ///
-        /// URIs that differ only in the replacement of unreserved characters
-        /// with their percent-encoded equivalents are considered equivalent.
-        public static let unreserved: Set<Character> = Set(
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
-        )
+    ///
+    /// A type-safe wrapper around `Set<Character>` for RFC 3986 character sets.
+    /// Use the static properties to access predefined character sets.
+    ///
+    /// Conforms to `SetAlgebra` so it behaves like `Set<Character>`:
+    /// ```swift
+    /// let chars = RFC_3986.CharacterSet.unreserved
+    /// if chars.contains("a") { ... }
+    /// let combined = chars.union(RFC_3986.CharacterSet.reserved)
+    /// ```
+    public struct CharacterSet: Sendable, SetAlgebra {
+        /// The underlying character set
+        internal var characters: Set<Character>
 
-        /// Reserved characters per RFC 3986 Section 2.2
-        ///
-        /// Characters that serve as delimiters in URIs:
-        /// `: / ? # [ ] @ ! $ & ' ( ) * + , ; =`
-        ///
-        /// These should be percent-encoded when representing data
-        /// rather than serving as delimiters.
-        public static let reserved: Set<Character> = Set(
-            ":/?#[]@!$&'()*+,;="
-        )
+        /// Internal initializer for creating character sets from Set<Character>
+        /// Use static properties for RFC 3986 defined character sets
+        internal init(_ characters: Set<Character>) {
+            self.characters = characters
+        }
 
-        /// General delimiters (subset of reserved) per RFC 3986 Section 2.2
-        ///
-        /// Characters: `: / ? # [ ] @`
-        public static let genDelims: Set<Character> = Set(
-            ":/?#[]@"
-        )
+        // MARK: - SetAlgebra Conformance
 
-        /// Sub-delimiters (subset of reserved) per RFC 3986 Section 2.2
-        ///
-        /// Characters: `! $ & ' ( ) * + , ; =`
-        public static let subDelims: Set<Character> = Set(
-            "!$&'()*+,;="
-        )
+        /// Creates an empty character set (required by SetAlgebra)
+        public init() {
+            self.characters = []
+        }
 
-        /// Characters allowed in a URI scheme per RFC 3986 Section 3.1
-        ///
-        /// Scheme names consist of a sequence of characters beginning with a letter
-        /// and followed by any combination of letters, digits, plus (`+`), period (`.`),
-        /// or hyphen (`-`).
-        public static let scheme: Set<Character> = Set(
-            "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+.-"
-        )
+        public func contains(_ member: Character) -> Bool {
+            characters.contains(member)
+        }
 
-        /// Characters allowed in userinfo per RFC 3986 Section 3.2.1
-        ///
-        /// Userinfo may consist of unreserved characters, percent-encoded octets,
-        /// and sub-delimiters, plus the colon (`:`) character.
-        public static let userinfo: Set<Character> = unreserved.union(subDelims).union([":"])
+        public func union(_ other: Self) -> Self {
+            Self(characters.union(other.characters))
+        }
 
-        /// Characters allowed in host (reg-name) per RFC 3986 Section 3.2.2
-        ///
-        /// A registered name may consist of unreserved characters,
-        /// percent-encoded octets, and sub-delimiters.
-        public static let host: Set<Character> = unreserved.union(subDelims)
+        public func intersection(_ other: Self) -> Self {
+            Self(characters.intersection(other.characters))
+        }
 
-        /// Characters allowed in path segments per RFC 3986 Section 3.3
-        ///
-        /// Path characters include unreserved, sub-delimiters, and `:` and `@`.
-        public static let pathSegment: Set<Character> = unreserved.union(subDelims).union([":", "@"])
+        public func symmetricDifference(_ other: Self) -> Self {
+            Self(characters.symmetricDifference(other.characters))
+        }
 
-        /// Characters allowed in query per RFC 3986 Section 3.4
-        ///
-        /// Query characters include path segment characters plus `/` and `?`.
-        public static let query: Set<Character> = pathSegment.union(["/", "?"])
+        @discardableResult
+        public mutating func insert(_ newMember: Character) -> (inserted: Bool, memberAfterInsert: Character) {
+            characters.insert(newMember)
+        }
 
-        /// Characters allowed in fragment per RFC 3986 Section 3.5
-        ///
-        /// Fragment characters are the same as query characters.
-        public static let fragment: Set<Character> = query
+        @discardableResult
+        public mutating func remove(_ member: Character) -> Character? {
+            characters.remove(member)
+        }
+
+        @discardableResult
+        public mutating func update(with newMember: Character) -> Character? {
+            characters.update(with: newMember)
+        }
+
+        public mutating func formUnion(_ other: Self) {
+            characters.formUnion(other.characters)
+        }
+
+        public mutating func formIntersection(_ other: Self) {
+            characters.formIntersection(other.characters)
+        }
+
+        public mutating func formSymmetricDifference(_ other: Self) {
+            characters.formSymmetricDifference(other.characters)
+        }
     }
+}
 
-    // MARK: - Percent Encoding
+extension RFC_3986.CharacterSet {
+    
+    /// Unreserved characters per RFC 3986 Section 2.3
+    ///
+    /// Characters that can appear unencoded in URIs:
+    /// `A-Z a-z 0-9 - . _ ~`
+    ///
+    /// URIs that differ only in the replacement of unreserved characters
+    /// with their percent-encoded equivalents are considered equivalent.
+    public static let unreserved: Self = .init(Set(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
+    ))
+    
+    /// Reserved characters per RFC 3986 Section 2.2
+    ///
+    /// Characters that serve as delimiters in URIs:
+    /// `: / ? # [ ] @ ! $ & ' ( ) * + , ; =`
+    ///
+    /// These should be percent-encoded when representing data
+    /// rather than serving as delimiters.
+    public static let reserved: Self = .init(Set(
+        ":/?#[]@!$&'()*+,;="
+    ))
+    
+    /// General delimiters (subset of reserved) per RFC 3986 Section 2.2
+    ///
+    /// Characters: `: / ? # [ ] @`
+    public static let genDelims: Self = .init(Set(
+        ":/?#[]@"
+    ))
+    
+    /// Sub-delimiters (subset of reserved) per RFC 3986 Section 2.2
+    ///
+    /// Characters: `! $ & ' ( ) * + , ; =`
+    public static let subDelims: Self = .init(Set(
+        "!$&'()*+,;="
+    ))
+    
+    /// Characters allowed in a URI scheme per RFC 3986 Section 3.1
+    ///
+    /// Scheme names consist of a sequence of characters beginning with a letter
+    /// and followed by any combination of letters, digits, plus (`+`), period (`.`),
+    /// or hyphen (`-`).
+    public static let scheme: Self = .init(Set(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+.-"
+    ))
+    
+    /// Characters allowed in userinfo per RFC 3986 Section 3.2.1
+    ///
+    /// Userinfo may consist of unreserved characters, percent-encoded octets,
+    /// and sub-delimiters, plus the colon (`:`) character.
+    public static let userinfo: Self = unreserved.union(subDelims).union(.init(Set([":"])))
 
+    /// Characters allowed in host (reg-name) per RFC 3986 Section 3.2.2
+    ///
+    /// A registered name may consist of unreserved characters,
+    /// percent-encoded octets, and sub-delimiters.
+    public static let host: Self = unreserved.union(subDelims)
+
+    /// Characters allowed in path segments per RFC 3986 Section 3.3
+    ///
+    /// Path characters include unreserved, sub-delimiters, and `:` and `@`.
+    public static let pathSegment: Self = unreserved.union(subDelims).union(.init(Set([":", "@"])))
+
+    /// Characters allowed in query per RFC 3986 Section 3.4
+    ///
+    /// Query characters include path segment characters plus `/` and `?`.
+    public static let query: Self = pathSegment.union(.init(Set(["/", "?"])))
+
+    /// Characters allowed in fragment per RFC 3986 Section 3.5
+    ///
+    /// Fragment characters are the same as query characters.
+    public static let fragment: Self = query
+}
+
+
+
+// MARK: - RFC 3986 Percent Encoding Functions
+
+extension RFC_3986 {
     /// Percent-encodes a string according to RFC 3986 Section 2.1
     ///
     /// Characters not in the allowed set are encoded as `%HH` where HH is
@@ -85,86 +163,28 @@ extension RFC_3986 {
     /// - Parameters:
     ///   - string: The string to encode
     ///   - allowedCharacters: The set of characters that should not be encoded
-    /// - Returns: The percent-encoded string
+    /// - Returns: The percent-encoded string with UPPERCASE hex
     public static func percentEncode(
         _ string: String,
-        allowing allowedCharacters: Set<Character> = CharacterSets.unreserved
+        allowing allowedCharacters: RFC_3986.CharacterSet = .unreserved
     ) -> String {
-        var result = ""
-        for character in string {
-            if allowedCharacters.contains(character) {
-                result.append(character)
-            } else {
-                // Encode each UTF-8 byte
-                for byte in String(character).utf8 {
-                    // Convert byte to hex manually
-                    let hex = String(byte, radix: 16, uppercase: true)
-                    result.append("%")
-                    if hex.count == 1 {
-                        result.append("0")
-                    }
-                    result.append(hex)
-                }
-            }
-        }
-        return result
+        // Use generic implementation with UPPERCASE hex per RFC 3986
+        String.percentEncoded(
+            string: string,
+            allowing: allowedCharacters.characters,
+            uppercaseHex: true
+        )
     }
 
     /// Decodes a percent-encoded string according to RFC 3986 Section 2.1
     ///
     /// Replaces percent-encoded octets (`%HH`) with their corresponding characters.
+    /// Delegates to the generic String.percentDecoded from swift-standards.
     ///
     /// - Parameter string: The percent-encoded string to decode
-    /// - Returns: The decoded string, or the original if decoding fails
+    /// - Returns: The decoded string
     public static func percentDecode(_ string: String) -> String {
-        var result = ""
-        var index = string.startIndex
-
-        while index < string.endIndex {
-            if string[index] == "%" {
-                // Try to read the next two hex digits
-                let nextIndex = string.index(index, offsetBy: 1, limitedBy: string.endIndex)
-                let thirdIndex = string.index(index, offsetBy: 3, limitedBy: string.endIndex)
-
-                if let nextIndex = nextIndex,
-                   let thirdIndex = thirdIndex,
-                   thirdIndex <= string.endIndex {
-                    let hexString = String(string[nextIndex..<thirdIndex])
-
-                    if let byte = UInt8(hexString, radix: 16) {
-                        // Collect bytes for multi-byte UTF-8 sequences
-                        var bytes = [byte]
-                        var currentIndex = thirdIndex
-
-                        // Check if more bytes follow
-                        while currentIndex < string.endIndex,
-                              string[currentIndex] == "%",
-                              let next = string.index(currentIndex, offsetBy: 1, limitedBy: string.endIndex),
-                              let third = string.index(currentIndex, offsetBy: 3, limitedBy: string.endIndex),
-                              third <= string.endIndex {
-                            let nextHex = String(string[next..<third])
-                            if let nextByte = UInt8(nextHex, radix: 16) {
-                                bytes.append(nextByte)
-                                currentIndex = third
-                            } else {
-                                break
-                            }
-                        }
-
-                        // Try to decode UTF-8
-                        let decoded = String(decoding: bytes, as: UTF8.self)
-                        result.append(contentsOf: decoded)
-                        index = currentIndex
-                        continue
-                    }
-                }
-            }
-
-            result.append(string[index])
-            index = string.index(after: index)
-        }
-
-        return result
+        String.percentDecoded(string: string)
     }
 
     /// Normalizes percent-encoding per RFC 3986 Section 6.2.2.2
@@ -180,8 +200,8 @@ extension RFC_3986 {
 
         while index < string.endIndex {
             if string[index] == "%",
-                let nextIndex = string.index(index, offsetBy: 1, limitedBy: string.endIndex),
-                let thirdIndex = string.index(index, offsetBy: 3, limitedBy: string.endIndex)
+               let nextIndex = string.index(index, offsetBy: 1, limitedBy: string.endIndex),
+               let thirdIndex = string.index(index, offsetBy: 3, limitedBy: string.endIndex)
             {
                 let hexString = String(string[nextIndex..<thirdIndex])
 
@@ -194,7 +214,7 @@ extension RFC_3986 {
                     let character = Character(scalar)
 
                     // If it's unreserved, decode it
-                    if CharacterSets.unreserved.contains(character) {
+                    if RFC_3986.CharacterSet.unreserved.contains(character) {
                         result.append(character)
                     } else {
                         // Keep it encoded with uppercase hex
@@ -217,69 +237,3 @@ extension RFC_3986 {
     }
 }
 
-// MARK: - String Extensions for RFC 3986 Convenience
-
-extension String {
-    /// Percent-encodes this string for use in URIs per RFC 3986
-    ///
-    /// Uses UPPERCASE hex encoding per RFC 3986 Section 6.2.2.2.
-    /// Defaults to encoding all characters except unreserved characters.
-    ///
-    /// Example:
-    /// ```swift
-    /// let encoded = "hello world".percentEncodedForURI()
-    /// // "hello%20world"
-    /// ```
-    ///
-    /// - Parameter allowing: Character set to preserve (defaults to RFC 3986 unreserved)
-    /// - Returns: RFC 3986 compliant percent-encoded string
-    public func percentEncodedForURI(
-        allowing characterSet: Set<Character> = RFC_3986.CharacterSets.unreserved
-    ) -> String {
-        RFC_3986.percentEncode(self, allowing: characterSet)
-    }
-
-    /// Percent-decodes this URI string per RFC 3986
-    ///
-    /// Example:
-    /// ```swift
-    /// let decoded = "hello%20world".percentDecodedFromURI()
-    /// // "hello world"
-    /// ```
-    ///
-    /// - Returns: Decoded string, or original if decoding fails
-    public func percentDecodedFromURI() -> String {
-        RFC_3986.percentDecode(self)
-    }
-
-    /// Normalizes percent-encoding per RFC 3986 Section 6.2.2.2
-    ///
-    /// - Uppercases hex digits in percent-encoded octets
-    /// - Decodes percent-encoded unreserved characters
-    ///
-    /// - Returns: Normalized string
-    public func withNormalizedPercentEncoding() -> String {
-        RFC_3986.normalizePercentEncoding(self)
-    }
-
-    /// Returns `true` if this string is a valid URI per RFC 3986
-    public var isValidURI: Bool {
-        RFC_3986.isValidURI(self)
-    }
-
-    /// Returns `true` if this string is a valid HTTP(S) URI
-    public var isValidHTTPURI: Bool {
-        RFC_3986.isValidHTTP(self)
-    }
-
-    /// Attempts to create a URI from this string
-    ///
-    /// Example:
-    /// ```swift
-    /// let uri = try "https://example.com".asURI()
-    /// ```
-    public func asURI() throws -> RFC_3986.URI {
-        try RFC_3986.URI(self)
-    }
-}
-//

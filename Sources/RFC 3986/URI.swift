@@ -561,6 +561,65 @@ extension RFC_3986.URI {
         return RFC_3986.URI(unchecked: result)
     }
 
+    /// Normalizes percent-encoding per RFC 3986 Section 6.2.2.2
+    ///
+    /// This method:
+    /// - Uppercases hex digits in percent-encoded octets
+    /// - Decodes percent-encoded unreserved characters
+    ///
+    /// Example:
+    /// ```swift
+    /// let uri = try RFC_3986.URI("https://example.com/hello%2dworld")
+    /// let normalized = uri.normalizePercentEncoding()
+    /// // URI with path "hello-world" (decoded unreserved hyphen)
+    /// ```
+    ///
+    /// - Returns: A new URI with normalized percent-encoding
+    public func normalizePercentEncoding() -> RFC_3986.URI {
+        var normalizedPath = path?.string
+        var normalizedQuery = query?.string
+
+        // Normalize percent-encoding in path
+        if let pathString = normalizedPath {
+            normalizedPath = RFC_3986.normalizePercentEncoding(pathString)
+        }
+
+        // Normalize percent-encoding in query
+        if let queryString = normalizedQuery {
+            normalizedQuery = RFC_3986.normalizePercentEncoding(queryString)
+        }
+
+        // Reconstruct URI with normalized components
+        var result = ""
+        if let scheme = scheme?.value {
+            result += "\(scheme):"
+        }
+
+        // Add authority if present
+        if let host = host?.rawValue {
+            result += "//"
+            if let userinfo = userinfo?.rawValue {
+                result += "\(userinfo)@"
+            }
+            result += host
+            if let port = port {
+                result += ":\(port)"
+            }
+        }
+
+        if let path = normalizedPath {
+            result += path
+        }
+        if let query = normalizedQuery {
+            result += "?\(query)"
+        }
+        if let fragment = fragment?.value {
+            result += "#\(fragment)"
+        }
+
+        return RFC_3986.URI(unchecked: result)
+    }
+
     /// Resolves a relative URI reference against this URI as a base
     ///
     /// Per RFC 3986 Section 5, this implements the URI resolution algorithm
@@ -736,8 +795,8 @@ extension RFC_3986.URI {
         }
 
         // Add query with new item
-        let encodedName = RFC_3986.percentEncode(name, allowing: RFC_3986.CharacterSets.query)
-        let encodedValue = value.map { RFC_3986.percentEncode($0, allowing: RFC_3986.CharacterSets.query) }
+        let encodedName = RFC_3986.percentEncode(name, allowing: .query)
+        let encodedValue = value.map { RFC_3986.percentEncode($0, allowing: .query) }
 
         if let currentQuery = query?.string {
             result += "?\(currentQuery)&\(encodedName)"

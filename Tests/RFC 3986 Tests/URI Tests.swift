@@ -297,3 +297,57 @@ struct PathNormalizationTests {
         #expect(output == "mid/6")
     }
 }
+
+@Suite
+struct `URI normalizePercentEncoding()` {
+
+    @Test
+    func `Normalizes path percent-encoding`() throws {
+        let uri = try RFC_3986.URI("https://example.com/hello%2dworld")
+        let normalized = uri.normalizePercentEncoding()
+
+        // Hyphen is unreserved, should be decoded
+        #expect(normalized.path?.string == "/hello-world")
+        #expect(normalized.value == "https://example.com/hello-world")
+    }
+
+    @Test
+    func `Normalizes query percent-encoding`() throws {
+        let uri = try RFC_3986.URI("https://example.com?key%3dvalue")
+        let normalized = uri.normalizePercentEncoding()
+
+        // = is reserved in query, should stay encoded but uppercase
+        #expect(normalized.query?.string.contains("%3D") == true)
+    }
+
+    @Test
+    func `Uppercases hex digits`() throws {
+        let uri = try RFC_3986.URI("https://example.com/test%2fpath")
+        let normalized = uri.normalizePercentEncoding()
+
+        // Lowercase hex should become uppercase
+        #expect(normalized.value.contains("%2F"))
+        #expect(!normalized.value.contains("%2f"))
+    }
+
+    @Test
+    func `Returns new URI instance`() throws {
+        let uri = try RFC_3986.URI("https://example.com/test%2dpath")
+        let normalized = uri.normalizePercentEncoding()
+
+        // Should be different instances
+        #expect(uri.value != normalized.value)
+        #expect(uri.value == "https://example.com/test%2dpath")
+        #expect(normalized.value == "https://example.com/test-path")
+    }
+
+    @Test
+    func `Normalizes both path and query`() throws {
+        let uri = try RFC_3986.URI("https://example.com/test%2dpath?key%2dname=value")
+        let normalized = uri.normalizePercentEncoding()
+
+        // Both should be normalized
+        #expect(normalized.path?.string == "/test-path")
+        #expect(normalized.query?.string.contains("key-name") == true)
+    }
+}

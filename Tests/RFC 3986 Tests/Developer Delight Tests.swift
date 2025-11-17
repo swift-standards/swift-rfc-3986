@@ -1,4 +1,5 @@
 import Testing
+import Standards
 
 @testable import RFC_3986
 
@@ -19,23 +20,23 @@ struct ConvenienceAPIsTests {
         #expect(decoded == "hello world")
     }
 
-    @Test("String extension - isValidURI")
-    func stringIsValidURI() {
-        #expect("https://example.com".isValidURI == true)
-        #expect("not a uri".isValidURI == false)
+    @Test("String extension - uri property")
+    func stringUriProperty() {
+        #expect("https://example.com".uri != nil)
+        #expect("not a uri".uri == nil)
     }
 
-    @Test("String extension - isValidHTTPURI")
-    func stringIsValidHTTPURI() {
-        #expect("https://example.com".isValidHTTPURI == true)
-        #expect("ftp://example.com".isValidHTTPURI == false)
+    @Test("String extension - uri.isHTTP")
+    func stringUriIsHTTP() {
+        #expect("https://example.com".uri?.isHTTP == true)
+        #expect("ftp://example.com".uri?.isHTTP == false)
     }
 
-    @Test("String extension - asURI()")
-    func stringAsURI() throws {
+    @Test("String extension - uri parsing")
+    func stringUriParsing() {
         let string = "https://example.com"
-        let uri = try string.asURI()
-        #expect(uri.value == "https://example.com")
+        let uri = string.uri
+        #expect(uri?.value == "https://example.com")
     }
 
     @Test("URI isSecure property")
@@ -229,13 +230,12 @@ struct FluentChainsTests {
         #expect(uri.fragment?.value == "results")
     }
 
-    @Test("String method chaining")
-    func stringChaining() {
-        let result = "hello world?"
-            .percentEncoded()
-            .withNormalizedPercentEncoding()
+    @Test("URI method chaining")
+    func uriChaining() {
+        let encoded = "hello world?".percentEncoded()
+        let result = encoded.uri?.normalizePercentEncoding().value
 
-        #expect(result.contains("%20"))
-        #expect(result.contains("%3F"))
+        #expect(result?.contains("%20") == true)
+        #expect(result?.contains("%3F") == true)
     }
 }
