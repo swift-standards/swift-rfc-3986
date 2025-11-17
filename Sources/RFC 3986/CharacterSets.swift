@@ -217,40 +217,47 @@ extension RFC_3986 {
     }
 }
 
-// MARK: - String Extensions for Convenience
+// MARK: - String Extensions for RFC 3986 Convenience
 
 extension String {
-    /// Percent-encodes this string for use in URIs
+    /// Percent-encodes this string for use in URIs per RFC 3986
     ///
-    /// This is a convenience method that calls `RFC_3986.percentEncode(_:allowing:)`
+    /// Uses UPPERCASE hex encoding per RFC 3986 Section 6.2.2.2.
+    /// Defaults to encoding all characters except unreserved characters.
     ///
     /// Example:
     /// ```swift
-    /// let encoded = "hello world".percentEncoded()
+    /// let encoded = "hello world".percentEncodedForURI()
     /// // "hello%20world"
     /// ```
-    public func percentEncoded(
+    ///
+    /// - Parameter allowing: Character set to preserve (defaults to RFC 3986 unreserved)
+    /// - Returns: RFC 3986 compliant percent-encoded string
+    public func percentEncodedForURI(
         allowing characterSet: Set<Character> = RFC_3986.CharacterSets.unreserved
     ) -> String {
         RFC_3986.percentEncode(self, allowing: characterSet)
     }
 
-    /// Percent-decodes this string
-    ///
-    /// This is a convenience method that calls `RFC_3986.percentDecode(_:)`
+    /// Percent-decodes this URI string per RFC 3986
     ///
     /// Example:
     /// ```swift
-    /// let decoded = "hello%20world".percentDecoded()
+    /// let decoded = "hello%20world".percentDecodedFromURI()
     /// // "hello world"
     /// ```
-    public func percentDecoded() -> String {
+    ///
+    /// - Returns: Decoded string, or original if decoding fails
+    public func percentDecodedFromURI() -> String {
         RFC_3986.percentDecode(self)
     }
 
-    /// Normalizes percent-encoding in this string
+    /// Normalizes percent-encoding per RFC 3986 Section 6.2.2.2
     ///
-    /// This is a convenience method that calls `RFC_3986.normalizePercentEncoding(_:)`
+    /// - Uppercases hex digits in percent-encoded octets
+    /// - Decodes percent-encoded unreserved characters
+    ///
+    /// - Returns: Normalized string
     public func withNormalizedPercentEncoding() -> String {
         RFC_3986.normalizePercentEncoding(self)
     }
@@ -275,4 +282,4 @@ extension String {
         try RFC_3986.URI(self)
     }
 }
-
+//
