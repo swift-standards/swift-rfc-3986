@@ -103,12 +103,12 @@ struct ConvenienceAPIsTests {
     @Test("settingFragment()")
     func settingFragment() throws {
         let base = try RFC_3986.URI("https://example.com/path")
-        let withFragment = try base.settingFragment("section")
-        #expect(withFragment.fragment == "section")
+        let withFragment = try base.settingFragment(try! RFC_3986.URI.Fragment("section"))
+        #expect(withFragment.fragment?.value == "section")
 
         // Replace existing fragment
-        let replaced = try withFragment.settingFragment("other")
-        #expect(replaced.fragment == "other")
+        let replaced = try withFragment.settingFragment(try! RFC_3986.URI.Fragment("other"))
+        #expect(replaced.fragment?.value == "other")
     }
 }
 
@@ -125,7 +125,7 @@ struct OperatorsTests {
     @Test("/ operator for URI resolution - URI")
     func operatorResolveURI() throws {
         let base = try RFC_3986.URI("https://example.com/path/")
-        let reference = RFC_3986.URI(unchecked: "file.txt")
+        let reference = try! RFC_3986.URI("file.txt")
         let resolved = try base / reference
         #expect(resolved.value.hasSuffix("file.txt"))
     }
@@ -224,12 +224,12 @@ struct FluentChainsTests {
             .appendingPathComponent("users")
             .appendingQueryItem(name: "page", value: "1")
             .appendingQueryItem(name: "limit", value: "10")
-            .settingFragment("results")
+            .settingFragment(try! RFC_3986.URI.Fragment("results"))
 
         #expect(uri.value.contains("/api/users"))
         #expect(uri.query?.string.contains("page=1") == true)
         #expect(uri.query?.string.contains("limit=10") == true)
-        #expect(uri.fragment == "results")
+        #expect(uri.fragment?.value == "results")
     }
 
     @Test("String method chaining")

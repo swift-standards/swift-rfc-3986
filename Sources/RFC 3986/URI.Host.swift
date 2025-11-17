@@ -82,9 +82,12 @@ extension RFC_3986.URI {
 
         /// Creates a host without validation
         ///
-        /// - Parameter value: The host in the appropriate form
-        /// - Warning: This skips validation. Use only when you know the value is valid.
-        public static func unchecked(_ string: String) -> Host {
+        /// This is an internal optimization for static constants and validated values.
+        ///
+        /// - Parameter value: The host in the appropriate form (must be valid, not validated)
+        /// - Warning: This skips validation. For public use, use `try!` with
+        ///   the throwing initializer to make the risk explicit.
+        internal static func unchecked(_ string: String) -> Host {
             if string.hasPrefix("[") && string.hasSuffix("]") {
                 return .ipv6(String(string.dropFirst().dropLast()))
             } else if isValidIPv4(string) {
@@ -160,24 +163,6 @@ extension RFC_3986.URI {
 
             return string.unicodeScalars.allSatisfy { validChars.contains($0) }
         }
-    }
-}
-
-// MARK: - ExpressibleByStringLiteral
-
-extension RFC_3986.URI.Host: ExpressibleByStringLiteral {
-    /// Creates a host from a string literal without validation
-    ///
-    /// Example:
-    /// ```swift
-    /// let host: RFC_3986.URI.Host = "example.com"
-    /// ```
-    ///
-    /// - Note: This does not perform validation. For validated creation,
-    ///   use `try RFC_3986.URI.Host("example.com")`.
-    @_disfavoredOverload
-    public init(stringLiteral value: String) {
-        self = Self.unchecked(value)
     }
 }
 

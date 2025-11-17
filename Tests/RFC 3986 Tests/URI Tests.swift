@@ -192,14 +192,14 @@ struct URIComponentParsingTests {
     func parseScheme() throws {
         let string = "https://example.com"
         let uri = try RFC_3986.URI(string)
-        #expect(uri.scheme == "https")
+        #expect(uri.scheme?.value == "https")
     }
 
     @Test("Parse host")
     func parseHost() throws {
         let string = "https://example.com/path"
         let uri = try RFC_3986.URI(string)
-        #expect(uri.host == "example.com")
+        #expect(uri.host?.rawValue == "example.com")
     }
 
     @Test("Parse port")
@@ -213,33 +213,33 @@ struct URIComponentParsingTests {
     func parsePath() throws {
         let string = "https://example.com/path/to/resource"
         let uri = try RFC_3986.URI(string)
-        #expect(uri.path == "/path/to/resource")
+        #expect(uri.path?.string == "/path/to/resource")
     }
 
     @Test("Parse query")
     func parseQuery() throws {
         let string = "https://example.com/path?key=value&foo=bar"
         let uri = try RFC_3986.URI(string)
-        #expect(uri.query == "key=value&foo=bar")
+        #expect(uri.query?.string == "key=value&foo=bar")
     }
 
     @Test("Parse fragment")
     func parseFragment() throws {
         let string = "https://example.com/path#section"
         let uri = try RFC_3986.URI(string)
-        #expect(uri.fragment == "section")
+        #expect(uri.fragment?.value == "section")
     }
 
     @Test("Parse all components")
     func parseAllComponents() throws {
         let string = "https://example.com:8080/path?query=value#section"
         let uri = try RFC_3986.URI(string)
-        #expect(uri.scheme == "https")
-        #expect(uri.host == "example.com")
+        #expect(uri.scheme?.value == "https")
+        #expect(uri.host?.rawValue == "example.com")
         #expect(uri.port == 8080)
-        #expect(uri.path == "/path")
-        #expect(uri.query == "query=value")
-        #expect(uri.fragment == "section")
+        #expect(uri.path?.string == "/path")
+        #expect(uri.query?.string == "query=value")
+        #expect(uri.fragment?.value == "section")
     }
 }
 

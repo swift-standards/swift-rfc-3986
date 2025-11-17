@@ -75,13 +75,16 @@ extension RFC_3986.URI {
             self.isAbsolute = isAbsolute
         }
 
-        /// Creates a path from segments without validation
+        /// Creates a path without validation
+        ///
+        /// This is an internal optimization for static constants and validated values.
         ///
         /// - Parameters:
-        ///   - segments: The path segments
+        ///   - segments: The path segments (must be valid, not validated)
         ///   - isAbsolute: Whether this is an absolute path
-        /// - Warning: This skips validation. Use only when you know segments are valid.
-        public init(unchecked segments: [String], isAbsolute: Bool = true) {
+        /// - Warning: This skips validation. For public use, use `try!` with
+        ///   the throwing initializer to make the risk explicit.
+        internal init(unchecked segments: [String], isAbsolute: Bool = true) {
             self.segments = segments
             self.isAbsolute = isAbsolute
         }
@@ -198,27 +201,6 @@ extension RFC_3986.URI.Path: Collection {
 
     public func index(after i: Index) -> Index {
         segments.index(after: i)
-    }
-}
-
-// MARK: - ExpressibleByStringLiteral
-
-extension RFC_3986.URI.Path: ExpressibleByStringLiteral {
-    /// Creates a path from a string literal
-    ///
-    /// Example:
-    /// ```swift
-    /// let path: RFC_3986.URI.Path = "/users/123"
-    /// ```
-    ///
-    /// - Note: This performs validation and will trap on invalid input.
-    ///   Use for known-valid literals only.
-    public init(stringLiteral value: String) {
-        do {
-            try self.init(value)
-        } catch {
-            fatalError("Invalid path literal: \(value) - \(error)")
-        }
     }
 }
 

@@ -70,9 +70,12 @@ extension RFC_3986.URI {
 
         /// Creates a query without validation
         ///
-        /// - Parameter parameters: The query parameters
-        /// - Warning: This skips validation. Use only when you know parameters are valid.
-        public init(unchecked parameters: [(String, String?)]) {
+        /// This is an internal optimization for static constants and validated values.
+        ///
+        /// - Parameter parameters: The query parameters (must be valid, not validated)
+        /// - Warning: This skips validation. For public use, use `try!` with
+        ///   the throwing initializer to make the risk explicit.
+        internal init(unchecked parameters: [(String, String?)]) {
             self.parameters = parameters
         }
 
@@ -195,27 +198,6 @@ extension RFC_3986.URI.Query: Collection {
 
     public func index(after i: Index) -> Index {
         parameters.index(after: i)
-    }
-}
-
-// MARK: - ExpressibleByStringLiteral
-
-extension RFC_3986.URI.Query: ExpressibleByStringLiteral {
-    /// Creates a query from a string literal
-    ///
-    /// Example:
-    /// ```swift
-    /// let query: RFC_3986.URI.Query = "page=1&limit=20"
-    /// ```
-    ///
-    /// - Note: This performs validation and will trap on invalid input.
-    ///   Use for known-valid literals only.
-    public init(stringLiteral value: String) {
-        do {
-            try self.init(value)
-        } catch {
-            fatalError("Invalid query literal: \(value) - \(error)")
-        }
     }
 }
 

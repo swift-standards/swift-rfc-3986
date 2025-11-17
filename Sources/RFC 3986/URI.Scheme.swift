@@ -64,11 +64,14 @@ extension RFC_3986.URI {
             self.value = value.lowercased()
         }
 
-        /// Creates a scheme without validation (use when scheme is known to be valid)
+        /// Creates a scheme without validation
         ///
-        /// - Parameter value: The scheme name (must be valid)
-        /// - Warning: This skips validation. Use only when you know the value is valid.
-        public init(unchecked value: String) {
+        /// This is an internal optimization for static constants and validated values.
+        ///
+        /// - Parameter value: The scheme name (must be valid, not validated)
+        /// - Warning: This skips validation. For public use, use `try!` with
+        ///   the throwing initializer to make the risk explicit.
+        internal init(unchecked value: String) {
             self.value = value.lowercased()
         }
 
@@ -130,24 +133,6 @@ extension RFC_3986.URI {
             default: return nil
             }
         }
-    }
-}
-
-// MARK: - ExpressibleByStringLiteral
-
-extension RFC_3986.URI.Scheme: ExpressibleByStringLiteral {
-    /// Creates a scheme from a string literal without validation
-    ///
-    /// Example:
-    /// ```swift
-    /// let scheme: RFC_3986.URI.Scheme = "https"
-    /// ```
-    ///
-    /// - Note: This does not perform validation. For validated creation,
-    ///   use `try RFC_3986.URI.Scheme("https")`.
-    @_disfavoredOverload
-    public init(stringLiteral value: String) {
-        self.init(unchecked: value)
     }
 }
 

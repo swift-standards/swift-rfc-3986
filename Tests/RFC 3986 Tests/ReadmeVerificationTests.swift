@@ -130,7 +130,7 @@ struct ReadmeVerificationTests {
         let string = "https://example.com"
         let uri = try RFC_3986.URI(string)
 
-        #expect(uri.scheme == "https")
+        #expect(uri.scheme?.value == "https")
     }
 
     @Test("Component parsing - host")
@@ -139,7 +139,7 @@ struct ReadmeVerificationTests {
         let string = "https://example.com/path"
         let uri = try RFC_3986.URI(string)
 
-        #expect(uri.host == "example.com")
+        #expect(uri.host?.rawValue == "example.com")
     }
 
     @Test("Component parsing - port")
@@ -157,7 +157,7 @@ struct ReadmeVerificationTests {
         let string = "https://example.com/path/to/resource"
         let uri = try RFC_3986.URI(string)
 
-        #expect(uri.path == "/path/to/resource")
+        #expect(uri.path?.string == "/path/to/resource")
     }
 
     @Test("Component parsing - query")
@@ -166,7 +166,7 @@ struct ReadmeVerificationTests {
         let string = "https://example.com?key=value"
         let uri = try RFC_3986.URI(string)
 
-        #expect(uri.query == "key=value")
+        #expect(uri.query?.string == "key=value")
     }
 
     @Test("Component parsing - fragment")
@@ -175,6 +175,6 @@ struct ReadmeVerificationTests {
         let string = "https://example.com#section"
         let uri = try RFC_3986.URI(string)
 
-        #expect(uri.fragment == "section")
+        #expect(uri.fragment?.value == "section")
     }
 }
