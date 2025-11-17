@@ -1,4 +1,3 @@
-import Foundation
 
 // MARK: - URI Port
 
@@ -24,98 +23,106 @@ extension RFC_3986.URI {
     public struct Port: Sendable, Equatable, Hashable {
         /// The port number (0-65535)
         public let value: UInt16
+    }
+}
 
-        /// Creates a port from a 16-bit unsigned integer
-        ///
-        /// - Parameter value: The port number (0-65535)
-        public init(_ value: UInt16) {
-            self.value = value
-        }
+// MARK: - Initialization
 
-        /// Creates a port from a string representation
-        ///
-        /// - Parameter string: The port as a string (e.g., "8080")
-        /// - Returns: A Port if the string is a valid port number, nil otherwise
-        public init?(_ string: String) {
-            guard let port = UInt16(string) else { return nil }
-            self.init(port)
-        }
+extension RFC_3986.URI.Port {
+    /// Creates a port from a 16-bit unsigned integer
+    ///
+    /// - Parameter value: The port number (0-65535)
+    public init(_ value: UInt16) {
+        self.value = value
+    }
 
-        // MARK: - Common Ports
+    /// Creates a port from a string representation
+    ///
+    /// - Parameter string: The port as a string (e.g., "8080")
+    /// - Returns: A Port if the string is a valid port number, nil otherwise
+    public init?(_ string: String) {
+        guard let port = UInt16(string) else { return nil }
+        self.init(port)
+    }
+}
 
-        /// HTTP default port (80)
-        public static let http = Port(80)
+// MARK: - Common Ports
 
-        /// HTTPS default port (443)
-        public static let https = Port(443)
+extension RFC_3986.URI.Port {
+    /// HTTP default port (80)
+    public static let http = Self(80)
 
-        /// FTP default port (21)
-        public static let ftp = Port(21)
+    /// HTTPS default port (443)
+    public static let https = Self(443)
 
-        /// FTPS default port (990)
-        public static let ftps = Port(990)
+    /// FTP default port (21)
+    public static let ftp = Self(21)
 
-        /// SSH default port (22)
-        public static let ssh = Port(22)
+    /// FTPS default port (990)
+    public static let ftps = Self(990)
 
-        /// Telnet default port (23)
-        public static let telnet = Port(23)
+    /// SSH default port (22)
+    public static let ssh = Self(22)
 
-        /// SMTP default port (25)
-        public static let smtp = Port(25)
+    /// Telnet default port (23)
+    public static let telnet = Self(23)
 
-        /// DNS default port (53)
-        public static let dns = Port(53)
+    /// SMTP default port (25)
+    public static let smtp = Self(25)
 
-        /// DHCP server default port (67)
-        public static let dhcpServer = Port(67)
+    /// DNS default port (53)
+    public static let dns = Self(53)
 
-        /// DHCP client default port (68)
-        public static let dhcpClient = Port(68)
+    /// DHCP server default port (67)
+    public static let dhcpServer = Self(67)
 
-        /// POP3 default port (110)
-        public static let pop3 = Port(110)
+    /// DHCP client default port (68)
+    public static let dhcpClient = Self(68)
 
-        /// IMAP default port (143)
-        public static let imap = Port(143)
+    /// POP3 default port (110)
+    public static let pop3 = Self(110)
 
-        /// SNMP default port (161)
-        public static let snmp = Port(161)
+    /// IMAP default port (143)
+    public static let imap = Self(143)
 
-        /// LDAP default port (389)
-        public static let ldap = Port(389)
+    /// SNMP default port (161)
+    public static let snmp = Self(161)
 
-        /// LDAPS default port (636)
-        public static let ldaps = Port(636)
+    /// LDAP default port (389)
+    public static let ldap = Self(389)
 
-        /// MySQL default port (3306)
-        public static let mysql = Port(3306)
+    /// LDAPS default port (636)
+    public static let ldaps = Self(636)
 
-        /// PostgreSQL default port (5432)
-        public static let postgresql = Port(5432)
+    /// MySQL default port (3306)
+    public static let mysql = Self(3306)
 
-        /// Redis default port (6379)
-        public static let redis = Port(6379)
+    /// PostgreSQL default port (5432)
+    public static let postgresql = Self(5432)
 
-        /// MongoDB default port (27017)
-        public static let mongodb = Port(27017)
+    /// Redis default port (6379)
+    public static let redis = Self(6379)
 
-        // MARK: - Convenience Properties
+    /// MongoDB default port (27017)
+    public static let mongodb = Self(27017)
+}
 
-        /// Returns true if this is a well-known port (0-1023)
-        public var isWellKnown: Bool {
-            value < 1024
-        }
+// MARK: - Convenience Properties
 
-        /// Returns true if this is a registered port (1024-49151)
-        public var isRegistered: Bool {
-            value >= 1024 && value < 49152
-        }
+extension RFC_3986.URI.Port {
+    /// Returns true if this is a well-known port (0-1023)
+    public var isWellKnown: Bool {
+        value < 1024
+    }
 
-        /// Returns true if this is a dynamic/private port (49152-65535)
-        public var isDynamic: Bool {
-            value >= 49152
-        }
+    /// Returns true if this is a registered port (1024-49151)
+    public var isRegistered: Bool {
+        value >= 1024 && value < 49152
+    }
+
+    /// Returns true if this is a dynamic/private port (49152-65535)
+    public var isDynamic: Bool {
+        value >= 49152
     }
 }
 

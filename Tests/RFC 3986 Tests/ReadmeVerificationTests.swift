@@ -8,8 +8,8 @@ struct ReadmeVerificationTests {
 
     @Test("Creating URIs - from string literal")
     func creatingURIsStringLiteral() {
-        // From README example
-        let uri: RFC_3986.URI = "https://example.com/path"
+        // From README example - now requires explicit try!
+        let uri = try! RFC_3986.URI("https://example.com/path")
 
         #expect(uri.value == "https://example.com/path")
     }
@@ -30,7 +30,7 @@ struct ReadmeVerificationTests {
 
         // URL conforms to URI.Representable
         func process(uri: any RFC_3986.URI.Representable) -> String {
-            return uri.uriString
+            return uri.uri.value
         }
 
         let result = process(uri: url)
@@ -121,7 +121,7 @@ struct ReadmeVerificationTests {
 
         // URL should conform to URI.Representable
         let representable: any RFC_3986.URI.Representable = url
-        #expect(representable.uriString == "https://test.com")
+        #expect(representable.uri.value == "https://test.com")
     }
 
     @Test("Component parsing - scheme")

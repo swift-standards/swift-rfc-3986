@@ -1,4 +1,3 @@
-import Foundation
 
 // MARK: - URI Query
 

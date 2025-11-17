@@ -80,7 +80,7 @@ struct URICreationTests {
 
     @Test("Create URI from string literal")
     func createFromLiteral() {
-        let uri: RFC_3986.URI = "https://example.com"
+        let uri = try! RFC_3986.URI("https://example.com")
         #expect(uri.value == "https://example.com")
     }
 
@@ -250,13 +250,13 @@ struct URLURIConformanceTests {
     func urlConformsToURI() {
         let url = URL(string: "https://example.com/path")!
         let uri: any RFC_3986.URI.Representable = url
-        #expect(uri.uriString == "https://example.com/path")
+        #expect(uri.uri.value == "https://example.com/path")
     }
 
     @Test("URL with percent-encoded characters")
     func urlWithPercentEncoded() {
         let url = URL(string: "https://example.com/%E5%AF%BF%E5%8F%B8")!
-        #expect(url.uriString.contains("%E5%AF%BF%E5%8F%B8"))
+        #expect(url.uri.value.contains("%E5%AF%BF%E5%8F%B8"))
     }
 
     @Test("URL can be validated as HTTP URI")

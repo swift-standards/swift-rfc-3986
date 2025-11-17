@@ -1,4 +1,3 @@
-import Foundation
 
 /// RFC 3986: Uniform Resource Identifier (URI) Generic Syntax
 ///

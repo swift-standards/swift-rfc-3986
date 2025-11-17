@@ -63,8 +63,8 @@ extension RFC_3986 {
     ///
     /// Example:
     /// ```swift
-    /// func process(uri: any RFC_3986.URI.Representable) {
-    ///     print(uri.uriString)
+    /// func process(uri: any RFC_3986.URIRepresentable) {
+    ///     print(uri.uri.value)
     /// }
     ///
     /// let url = URL(string: "https://example.com")!
@@ -73,13 +73,6 @@ extension RFC_3986 {
     public protocol URIRepresentable {
         /// The URI representation
         var uri: RFC_3986.URI { get }
-    }
-}
-
-extension RFC_3986.URIRepresentable {
-    /// The URI as a string (convenience)
-    public var uriString: String {
-        uri.value
     }
 }
 
@@ -655,24 +648,6 @@ extension URL: RFC_3986.URIRepresentable {
     }
 }
 
-// MARK: - ExpressibleByStringLiteral
-
-extension RFC_3986.URI: ExpressibleByStringLiteral {
-    /// Creates a URI from a string literal without validation
-    ///
-    /// Example:
-    /// ```swift
-    /// let uri: RFC_3986.URI = "https://example.com/path"
-    /// ```
-    ///
-    /// Note: This does not perform validation. For validated creation,
-    /// use `try RFC_3986.URI("string")`.
-    @_disfavoredOverload
-    public init(stringLiteral value: String) {
-        self.init(unchecked: value)
-    }
-}
-
 // MARK: - CustomStringConvertible
 
 extension RFC_3986.URI: CustomStringConvertible {
@@ -818,32 +793,25 @@ extension RFC_3986 {
         if string.isEmpty { return true }
 
         // URI references must be ASCII-only per RFC 3986
-        // Foundation's URL accepts non-ASCII characters, so we need to check explicitly
         guard string.allSatisfy({ $0.isASCII }) else { return false }
 
         // Reject strings with unencoded spaces or control characters
-        if string.contains(" ") || string.rangeOfCharacter(from: .controlCharacters) != nil {
+        if string.contains(" ") || string.contains(where: { $0.isASCII && $0.asciiValue! < 0x20 || $0.asciiValue == 0x7F }) {
             return false
         }
 
         // Reject strings with invalid characters like < > { } | \ ^ `
-        let invalidChars = CharacterSet(charactersIn: "<>{}|\\^`\"")
-        if string.rangeOfCharacter(from: invalidChars) != nil {
+        let invalidChars: Set<Character> = ["<", ">", "{", "}", "|", "\\", "^", "`", "\""]
+        if string.contains(where: { invalidChars.contains($0) }) {
             return false
         }
 
-        // Try to create a URL from the string (Foundation URL handles both absolute and relative)
-        // For relative references, we use a dummy base to validate parsing
-        if URL(string: string) != nil {
-            return true
-        }
+        // TODO: Replace with pure RFC 3986 parser
+        // For now, we do basic validation without Foundation
+        // A proper implementation should parse according to RFC 3986 ABNF grammar
 
-        // Try parsing as relative reference with a base URL
-        if let _ = URL(string: string, relativeTo: URL(string: "http://example.com")) {
-            return true
-        }
-
-        return false
+        // Very basic validation: allow most ASCII except the explicitly forbidden characters above
+        return true
     }
 
     /// Validates if a URI is a valid HTTP(S) URI
@@ -851,7 +819,7 @@ extension RFC_3986 {
     /// - Parameter uri: The URI to validate
     /// - Returns: true if the URI is an HTTP or HTTPS URI
     public static func isValidHTTP(_ uri: any URIRepresentable) -> Bool {
-        guard let url = URL(string: uri.uriString) else { return false }
+        guard let url = URL(string: uri.uri.value) else { return false }
         return url.scheme == "http" || url.scheme == "https"
     }
 
