@@ -3,44 +3,44 @@ import Standards
 
 @testable import RFC_3986
 
-@Suite("Developer Delight - Convenience APIs")
-struct ConvenienceAPIsTests {
+@Suite
+struct `Developer Delight - Convenience APIs` {
 
-    @Test("String extension - percentEncoded()")
-    func stringPercentEncoded() {
+    @Test
+    func `String extension - percentEncoded()`() {
         let input = "hello world"
         let encoded = input.percentEncoded()
         #expect(encoded == "hello%20world")
     }
 
-    @Test("String extension - percentDecoded()")
-    func stringPercentDecoded() {
+    @Test
+    func `String extension - percentDecoded()`() {
         let input = "hello%20world"
         let decoded = input.percentDecoded()
         #expect(decoded == "hello world")
     }
 
-    @Test("String extension - uri property")
-    func stringUriProperty() {
+    @Test
+    func `String extension - uri property`() {
         #expect("https://example.com".uri != nil)
         #expect("not a uri".uri == nil)
     }
 
-    @Test("String extension - uri.isHTTP")
-    func stringUriIsHTTP() {
+    @Test
+    func `String extension - uri.isHTTP`() {
         #expect("https://example.com".uri?.isHTTP == true)
         #expect("ftp://example.com".uri?.isHTTP == false)
     }
 
-    @Test("String extension - uri parsing")
-    func stringUriParsing() {
+    @Test
+    func `String extension - uri parsing`() {
         let string = "https://example.com"
         let uri = string.uri
         #expect(uri?.value == "https://example.com")
     }
 
-    @Test("URI isSecure property")
-    func uriIsSecure() throws {
+    @Test
+    func `URI isSecure property`() throws {
         let httpsURI = try RFC_3986.URI("https://example.com")
         #expect(httpsURI.isSecure == true)
 
@@ -51,8 +51,8 @@ struct ConvenienceAPIsTests {
         #expect(wssURI.isSecure == true)
     }
 
-    @Test("URI isHTTP property")
-    func uriIsHTTP() throws {
+    @Test
+    func `URI isHTTP property`() throws {
         let httpsURI = try RFC_3986.URI("https://example.com")
         #expect(httpsURI.isHTTP == true)
 
@@ -60,15 +60,15 @@ struct ConvenienceAPIsTests {
         #expect(ftpURI.isHTTP == false)
     }
 
-    @Test("URI base property")
-    func uriBase() throws {
+    @Test
+    func `URI base property`() throws {
         let uri = try RFC_3986.URI("https://example.com:8080/path?query#fragment")
         let base = uri.base
         #expect(base?.value == "https://example.com:8080")
     }
 
-    @Test("URI pathAndQuery property")
-    func uriPathAndQuery() throws {
+    @Test
+    func `URI pathAndQuery property`() throws {
         let uri = try RFC_3986.URI("https://example.com/path?key=value")
         #expect(uri.pathAndQuery == "/path?key=value")
 
@@ -76,8 +76,8 @@ struct ConvenienceAPIsTests {
         #expect(uriNoQuery.pathAndQuery == "/path")
     }
 
-    @Test("appendingPathComponent()")
-    func appendingPathComponent() throws {
+    @Test
+    func `appendingPathComponent()`() throws {
         let base = try RFC_3986.URI("https://example.com/path")
         let appended = try base.appendingPathComponent("file.txt")
         #expect(appended.value == "https://example.com/path/file.txt")
@@ -88,8 +88,8 @@ struct ConvenienceAPIsTests {
         #expect(appendedWithSlash.value == "https://example.com/path/file.txt")
     }
 
-    @Test("appendingQueryItem()")
-    func appendingQueryItem() throws {
+    @Test
+    func `appendingQueryItem()`() throws {
         let base = try RFC_3986.URI("https://example.com/path")
         let withQuery = try base.appendingQueryItem(name: "key", value: "value")
         #expect(withQuery.query?.string.contains("key=value") == true)
@@ -100,8 +100,8 @@ struct ConvenienceAPIsTests {
         #expect(withTwoQueries.query?.string.contains("foo=bar") == true)
     }
 
-    @Test("settingFragment()")
-    func settingFragment() throws {
+    @Test
+    func `settingFragment()`() throws {
         let base = try RFC_3986.URI("https://example.com/path")
         let withFragment = try base.settingFragment(try! RFC_3986.URI.Fragment("section"))
         #expect(withFragment.fragment?.value == "section")
@@ -112,26 +112,26 @@ struct ConvenienceAPIsTests {
     }
 }
 
-@Suite("Developer Delight - Operators")
-struct OperatorsTests {
+@Suite
+struct `Developer Delight - Operators` {
 
-    @Test("/ operator for URI resolution - String")
-    func operatorResolveString() throws {
+    @Test
+    func `/ operator for URI resolution - String`() throws {
         let base = try RFC_3986.URI("https://example.com/path/to/resource")
         let resolved = try base / "../other"
         #expect(resolved.value == "https://example.com/path/other")
     }
 
-    @Test("/ operator for URI resolution - URI")
-    func operatorResolveURI() throws {
+    @Test
+    func `/ operator for URI resolution - URI`() throws {
         let base = try RFC_3986.URI("https://example.com/path/")
         let reference = try! RFC_3986.URI("file.txt")
         let resolved = try base / reference
         #expect(resolved.value.hasSuffix("file.txt"))
     }
 
-    @Test("Comparable - sorting URIs")
-    func comparableSorting() throws {
+    @Test
+    func `Comparable - sorting URIs`() throws {
         let uri1 = try RFC_3986.URI("https://a.com")
         let uri2 = try RFC_3986.URI("https://b.com")
         let uri3 = try RFC_3986.URI("https://c.com")
@@ -142,8 +142,8 @@ struct OperatorsTests {
         #expect(sorted[2].value == "https://c.com")
     }
 
-    @Test("Comparable - comparison")
-    func comparableComparison() throws {
+    @Test
+    func `Comparable - comparison`() throws {
         let uri1 = try RFC_3986.URI("https://a.com")
         let uri2 = try RFC_3986.URI("https://b.com")
 
@@ -154,11 +154,11 @@ struct OperatorsTests {
     }
 }
 
-@Suite("Developer Delight - Error Messages")
-struct ErrorMessagesTests {
+@Suite
+struct `Developer Delight - Error Messages` {
 
-    @Test("Error description - invalidURI with non-ASCII")
-    func errorDescriptionInvalidURINonASCII() {
+    @Test
+    func `Error description - invalidURI with non-ASCII`() {
         do {
             let string = "https://example.com/寿司"
             _ = try RFC_3986.URI(string)
@@ -170,8 +170,8 @@ struct ErrorMessagesTests {
         }
     }
 
-    @Test("Error description - invalidURI with invalid characters")
-    func errorDescriptionInvalidURIWithInvalidChars() {
+    @Test
+    func `Error description - invalidURI with invalid characters`() {
         do {
             let string = "http://example.com/<invalid>"
             _ = try RFC_3986.URI(string)
@@ -184,11 +184,11 @@ struct ErrorMessagesTests {
     }
 }
 
-@Suite("Developer Delight - Debug Output")
-struct DebugOutputTests {
+@Suite
+struct `Developer Delight - Debug Output` {
 
-    @Test("CustomDebugStringConvertible - full URI")
-    func debugDescriptionFull() throws {
+    @Test
+    func `CustomDebugStringConvertible - full URI`() throws {
         let uri = try RFC_3986.URI("https://example.com:8080/path?key=value#section")
         let debug = uri.debugDescription
 
@@ -200,8 +200,8 @@ struct DebugOutputTests {
         #expect(debug.contains("fragment: section"))
     }
 
-    @Test("CustomDebugStringConvertible - minimal URI")
-    func debugDescriptionMinimal() throws {
+    @Test
+    func `CustomDebugStringConvertible - minimal URI`() throws {
         let uri = try RFC_3986.URI("https://example.com")
         let debug = uri.debugDescription
 
@@ -212,11 +212,11 @@ struct DebugOutputTests {
     }
 }
 
-@Suite("Developer Delight - Fluent Chains")
-struct FluentChainsTests {
+@Suite
+struct `Developer Delight - Fluent Chains` {
 
-    @Test("Chaining convenience methods")
-    func chainingMethods() throws {
+    @Test
+    func `Chaining convenience methods`() throws {
         let uri = try RFC_3986.URI("https://example.com")
             .appendingPathComponent("api")
             .appendingPathComponent("users")
@@ -230,8 +230,8 @@ struct FluentChainsTests {
         #expect(uri.fragment?.value == "results")
     }
 
-    @Test("URI method chaining")
-    func uriChaining() {
+    @Test
+    func `URI method chaining`() {
         let encoded = "hello world?".percentEncoded()
         let result = encoded.uri?.normalizePercentEncoding().value
 
