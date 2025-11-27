@@ -1,3 +1,5 @@
+public import INCITS_4_1986
+
 // MARK: - URI Port
 
 extension RFC_3986.URI {
@@ -22,6 +24,112 @@ extension RFC_3986.URI {
     public struct Port: Sendable, Equatable, Hashable {
         /// The port number (0-65535)
         public let value: UInt16
+
+        /// Creates a port WITHOUT validation
+        ///
+        /// **Warning**: Bypasses validation.
+        /// Only use with compile-time constants or pre-validated values.
+        ///
+        /// - Parameters:
+        ///   - unchecked: Void parameter to prevent accidental use
+        ///   - value: The port value (unchecked)
+        init(
+            __unchecked _: Void,
+            value: UInt16
+        ) {
+            self.value = value
+        }
+    }
+}
+
+// MARK: - Serializable
+
+extension RFC_3986.URI.Port: UInt8.ASCII.Serializable {
+    public static let serialize: @Sendable (Self) -> [UInt8] = [UInt8].init
+
+    /// Parses port from ASCII bytes (CANONICAL PRIMITIVE)
+    ///
+    /// This is the primitive parser that works at the byte level.
+    /// RFC 3986 ports are ASCII digit sequences.
+    ///
+    /// ## Category Theory
+    ///
+    /// This is the fundamental parsing transformation:
+    /// - **Domain**: [UInt8] (ASCII digit bytes)
+    /// - **Codomain**: RFC_3986.URI.Port (structured data)
+    ///
+    /// ## RFC 3986 Section 3.2.3
+    ///
+    /// ```
+    /// port = *DIGIT
+    /// ```
+    ///
+    /// - Parameter bytes: The ASCII byte representation of the port
+    /// - Throws: `RFC_3986.URI.Port.Error` if the bytes are malformed
+    public init<Bytes: Collection>(ascii bytes: Bytes, in context: Void) throws(Error)
+    where Bytes.Element == UInt8 {
+        guard !bytes.isEmpty else {
+            throw Error.empty
+        }
+
+        var result: UInt32 = 0
+
+        for byte in bytes {
+            guard byte.ascii.isDigit else {
+                throw Error.invalidCharacter(String(decoding: bytes, as: UTF8.self), byte: byte)
+            }
+
+            // Convert ASCII digit to numeric value (0x30 = '0')
+            let digit = UInt32(byte) - 0x30
+            result = result * 10 + digit
+
+            // Check for overflow
+            guard result <= UInt32(UInt16.max) else {
+                throw Error.overflow(String(decoding: bytes, as: UTF8.self))
+            }
+        }
+
+        self.init(__unchecked: (), value: UInt16(result))
+    }
+}
+
+// MARK: - Byte Serialization
+
+extension [UInt8] {
+    /// Creates ASCII byte representation of an RFC 3986 URI port
+    ///
+    /// This is the canonical serialization of ports to bytes.
+    /// RFC 3986 ports are ASCII digit sequences.
+    ///
+    /// ## Category Theory
+    ///
+    /// This is the most universal serialization (natural transformation):
+    /// - **Domain**: RFC_3986.URI.Port (structured data)
+    /// - **Codomain**: [UInt8] (ASCII bytes)
+    ///
+    /// - Parameter port: The port to serialize
+    public init(_ port: RFC_3986.URI.Port) {
+        self = Array(String(port.value).utf8)
+    }
+}
+
+// MARK: - Protocol Conformances
+
+extension RFC_3986.URI.Port: UInt8.ASCII.RawRepresentable {
+    /// RawValue type for RawRepresentable conformance
+    public typealias RawValue = UInt16
+
+    public var rawValue: UInt16 {
+        value
+    }
+
+    public init?(rawValue: UInt16) {
+        self.init(__unchecked: (), value: rawValue)
+    }
+}
+extension RFC_3986.URI.Port: CustomStringConvertible {
+    public var description: String {
+        String(value)
     }
 }
 
@@ -32,7 +140,7 @@ extension RFC_3986.URI.Port {
     ///
     /// - Parameter value: The port number (0-65535)
     public init(_ value: UInt16) {
-        self.value = value
+        self.init(__unchecked: (), value: value)
     }
 
     /// Creates a port from a string representation
@@ -139,14 +247,6 @@ extension RFC_3986.URI.Port: ExpressibleByIntegerLiteral {
     }
 }
 
-// MARK: - CustomStringConvertible
-
-extension RFC_3986.URI.Port: CustomStringConvertible {
-    public var description: String {
-        String(value)
-    }
-}
-
 // MARK: - Codable
 
 extension RFC_3986.URI.Port: Codable {
@@ -167,17 +267,5 @@ extension RFC_3986.URI.Port: Codable {
 extension RFC_3986.URI.Port: Comparable {
     public static func < (lhs: RFC_3986.URI.Port, rhs: RFC_3986.URI.Port) -> Bool {
         lhs.value < rhs.value
-    }
-}
-
-// MARK: - RawRepresentable
-
-extension RFC_3986.URI.Port: RawRepresentable {
-    public var rawValue: UInt16 {
-        value
-    }
-
-    public init?(rawValue: UInt16) {
-        self.init(rawValue)
     }
 }

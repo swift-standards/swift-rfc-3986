@@ -1,3 +1,5 @@
+public import INCITS_4_1986
+
 // MARK: - URI Fragment
 
 extension RFC_3986.URI {
@@ -35,88 +37,120 @@ extension RFC_3986.URI {
     /// > identifying information. [...] The semantics of a fragment identifier
     /// > are defined by the set of representations that might result from a
     /// > retrieval action on the primary resource.
-    public struct Fragment: Sendable {
+    public struct Fragment: Sendable, Equatable, Hashable, Codable {
+        /// RawValue type for RawRepresentable conformance
+        public typealias RawValue = String
+
         /// The fragment value
-        public let value: String
+        public let rawValue: String
 
-        /// Creates a fragment from a string with validation
+        /// Creates a fragment WITHOUT validation
         ///
-        /// - Parameter value: The fragment string (without leading "#")
-        /// - Throws: `RFC_3986.Error.invalidComponent` if the fragment contains invalid characters
+        /// **Warning**: Bypasses RFC 3986 validation.
+        /// Only use with compile-time constants or pre-validated values.
         ///
-        /// Example:
-        /// ```swift
-        /// let fragment = try RFC_3986.URI.Fragment("section-1")
-        /// let heading = try RFC_3986.URI.Fragment("introduction")
-        /// ```
-        public init(_ value: some StringProtocol) throws {
-            // Basic validation - check for obviously invalid characters
-            // Full validation would check against: *( pchar / "/" / "?" )
-            if value.contains(where: { $0.isNewline }) {
-                throw RFC_3986.Error.invalidComponent("Fragment contains newline")
+        /// - Parameters:
+        ///   - unchecked: Void parameter to prevent accidental use
+        ///   - rawValue: The raw fragment value (unchecked)
+        init(
+            __unchecked _: Void,
+            rawValue: String
+        ) {
+            self.rawValue = rawValue
+        }
+    }
+}
+
+// MARK: - Serializable
+
+extension RFC_3986.URI.Fragment: UInt8.ASCII.Serializable {
+    public static let serialize: @Sendable (Self) -> [UInt8] = [UInt8].init
+
+    /// Parses fragment from ASCII bytes (CANONICAL PRIMITIVE)
+    ///
+    /// This is the primitive parser that works at the byte level.
+    /// RFC 3986 fragments follow the pattern: *( pchar / "/" / "?" )
+    ///
+    /// ## Category Theory
+    ///
+    /// This is the fundamental parsing transformation:
+    /// - **Domain**: [UInt8] (ASCII bytes)
+    /// - **Codomain**: RFC_3986.URI.Fragment (structured data)
+    ///
+    /// ## RFC 3986 Section 3.5
+    ///
+    /// ```
+    /// fragment = *( pchar / "/" / "?" )
+    /// ```
+    ///
+    /// - Parameter bytes: The ASCII byte representation of the fragment
+    /// - Throws: `RFC_3986.URI.Fragment.Error` if the bytes are malformed
+    public init<Bytes: Collection>(ascii bytes: Bytes, in context: Void) throws(Error)
+    where Bytes.Element == UInt8 {
+        // Fragment can be empty per RFC 3986
+        // Check for invalid characters
+        for byte in bytes {
+            // Fragments cannot contain '#' (0x23)
+            if byte == 0x23 {
+                throw Error.containsHash(String(decoding: bytes, as: UTF8.self))
             }
 
-            // Fragments cannot contain "#" (that would start a new fragment)
-            if value.contains("#") {
-                throw RFC_3986.Error.invalidComponent("Fragment cannot contain '#' character")
+            // Check for newlines (LF: 0x0A, CR: 0x0D)
+            if byte == 0x0A || byte == 0x0D {
+                throw Error.containsNewline(String(decoding: bytes, as: UTF8.self))
             }
-
-            self.value = String(value)
         }
 
-        /// Creates a fragment without validation
-        ///
-        /// This is an internal optimization for cases where validation has already
-        /// been performed or for static constants.
-        ///
-        /// - Parameter value: The fragment string (must be valid, not validated)
-        /// - Warning: This skips validation. For public use, use `try!` with
-        ///   the throwing initializer to make the risk explicit.
-        internal init(unchecked value: String) {
-            self.value = value
-        }
-
-        /// The string representation of the fragment
-        ///
-        /// Returns the fragment value (without leading "#").
-        public var string: String {
-            value
-        }
-
-        /// Returns true if the fragment is empty
-        public var isEmpty: Bool {
-            value.isEmpty
-        }
+        self.init(__unchecked: (), rawValue: String(decoding: bytes, as: UTF8.self))
     }
 }
 
-// MARK: - Equatable
+// MARK: - Byte Serialization
 
-extension RFC_3986.URI.Fragment: Equatable {
-    public static func == (lhs: RFC_3986.URI.Fragment, rhs: RFC_3986.URI.Fragment) -> Bool {
-        lhs.value == rhs.value
+extension [UInt8] {
+    /// Creates ASCII byte representation of an RFC 3986 URI fragment
+    ///
+    /// This is the canonical serialization of fragments to bytes.
+    ///
+    /// ## Category Theory
+    ///
+    /// This is the most universal serialization (natural transformation):
+    /// - **Domain**: RFC_3986.URI.Fragment (structured data)
+    /// - **Codomain**: [UInt8] (ASCII bytes)
+    ///
+    /// - Parameter fragment: The fragment to serialize
+    public init(_ fragment: RFC_3986.URI.Fragment) {
+        self = Array(fragment.rawValue.utf8)
     }
 }
 
-// MARK: - Hashable
+// MARK: - Protocol Conformances
 
-extension RFC_3986.URI.Fragment: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(value)
+extension RFC_3986.URI.Fragment: UInt8.ASCII.RawRepresentable {}
+extension RFC_3986.URI.Fragment: CustomStringConvertible {}
+
+// MARK: - Convenience Properties
+
+extension RFC_3986.URI.Fragment {
+    /// The fragment value (alias for rawValue for backward compatibility)
+    public var value: String { rawValue }
+
+    /// The string representation of the fragment
+    ///
+    /// Returns the fragment value (without leading "#").
+    public var string: String {
+        rawValue
     }
-}
 
-// MARK: - CustomStringConvertible
-
-extension RFC_3986.URI.Fragment: CustomStringConvertible {
-    public var description: String {
-        value
+    /// Returns true if the fragment is empty
+    public var isEmpty: Bool {
+        rawValue.isEmpty
     }
 }
 
 // MARK: - Codable
 
-extension RFC_3986.URI.Fragment: Codable {
+extension RFC_3986.URI.Fragment {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         let string = try container.decode(String.self)
@@ -125,6 +159,6 @@ extension RFC_3986.URI.Fragment: Codable {
 
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
-        try container.encode(value)
+        try container.encode(rawValue)
     }
 }

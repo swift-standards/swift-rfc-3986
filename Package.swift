@@ -18,14 +18,18 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/swift-standards/swift-standards", from: "0.1.0"),
-        .package(url: "https://github.com/swift-standards/swift-incits-4-1986", from: "0.1.0")
+        .package(url: "https://github.com/swift-standards/swift-incits-4-1986", from: "0.5.0"),
+        .package(path: "../swift-ipv4-standard"),
+        .package(path: "../swift-ipv6-standard"),
     ],
     targets: [
         .target(
             name: "RFC 3986",
             dependencies: [
                 .product(name: "Standards", package: "swift-standards"),
-                .product(name: "INCITS 4 1986", package: "swift-incits-4-1986")
+                .product(name: "INCITS 4 1986", package: "swift-incits-4-1986"),
+                .product(name: "IPv4 Standard", package: "swift-ipv4-standard"),
+                .product(name: "IPv6 Standard", package: "swift-ipv6-standard"),
             ]
         ),
         .testTarget(

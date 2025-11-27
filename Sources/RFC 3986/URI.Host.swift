@@ -1,3 +1,5 @@
+public import INCITS_4_1986
+
 // MARK: - URI Host
 
 extension RFC_3986.URI {
@@ -38,68 +40,172 @@ extension RFC_3986.URI {
     }
 }
 
-// MARK: - Initialization
+// MARK: - Serializable
 
-extension RFC_3986.URI.Host {
-    /// Creates a host from a string, automatically classifying the type
+extension RFC_3986.URI.Host: UInt8.ASCII.Serializable {
+    public static let serialize: @Sendable (Self) -> [UInt8] = [UInt8].init
+
+    /// Parses host from ASCII bytes (CANONICAL PRIMITIVE)
     ///
-    /// - Parameter string: The host string to parse
-    /// - Throws: `RFC_3986.Error.invalidComponent` if the host is invalid
+    /// This is the primitive parser that works at the byte level.
+    /// RFC 3986 hosts can be: IP-literal / IPv4address / reg-name
     ///
-    /// This initializer automatically detects whether the input is an IPv4 address,
-    /// IPv6 address (in brackets), or a registered name.
-    public init(_ string: some StringProtocol) throws {
-        guard !string.isEmpty else {
-            throw RFC_3986.Error.invalidComponent("Host cannot be empty")
+    /// ## Category Theory
+    ///
+    /// This is the fundamental parsing transformation:
+    /// - **Domain**: [UInt8] (ASCII bytes)
+    /// - **Codomain**: RFC_3986.URI.Host (structured data)
+    ///
+    /// ## RFC 3986 Section 3.2.2
+    ///
+    /// ```
+    /// host = IP-literal / IPv4address / reg-name
+    /// IP-literal = "[" ( IPv6address / IPvFuture ) "]"
+    /// ```
+    ///
+    /// - Parameter bytes: The ASCII byte representation of the host
+    /// - Throws: `RFC_3986.URI.Host.Error` if the bytes are malformed
+    public init<Bytes: Collection>(ascii bytes: Bytes, in context: Void) throws(Error)
+    where Bytes.Element == UInt8 {
+        guard !bytes.isEmpty else {
+            throw Error.empty
         }
 
-        let stringValue = String(string)
+        let string = String(decoding: bytes, as: UTF8.self)
 
         // Check for IPv6 (enclosed in brackets)
-        if stringValue.hasPrefix("[") && stringValue.hasSuffix("]") {
-            let ipv6 = String(stringValue.dropFirst().dropLast())
-            guard Self.isValidIPv6(ipv6) else {
-                throw RFC_3986.Error.invalidComponent(
-                    "Invalid IPv6 address: \(ipv6)"
-                )
+        if bytes.first == 0x5B {  // '['
+            // Check that it ends with ']'
+            let bytesArray = Array(bytes)
+            guard bytesArray.last == 0x5D else {  // ']'
+                throw Error.invalidIPv6(string, reason: "Missing closing bracket")
             }
+
+            let ipv6Bytes = bytesArray.dropFirst().dropLast()
+            let ipv6 = String(decoding: ipv6Bytes, as: UTF8.self)
+
+            // Validate IPv6 characters (hex digits and colons)
+            for byte in ipv6Bytes {
+                guard byte.ascii.isHexDigit || byte == 0x3A else {  // ':'
+                    throw Error.invalidIPv6(ipv6, reason: "Invalid character in IPv6 address")
+                }
+            }
+
+            // Must contain at least one colon
+            guard ipv6Bytes.contains(0x3A) else {
+                throw Error.invalidIPv6(ipv6, reason: "IPv6 address must contain colons")
+            }
+
             self = .ipv6(ipv6)
             return
         }
 
-        // Check for IPv4
-        if Self.isValidIPv4(stringValue) {
-            self = .ipv4(stringValue)
+        // Check for IPv4 (4 dot-separated decimal octets)
+        if Self.isValidIPv4Bytes(bytes) {
+            self = .ipv4(string)
             return
         }
 
         // Otherwise treat as registered name
-        // Validate registered name characters
-        guard Self.isValidRegisteredName(stringValue) else {
-            throw RFC_3986.Error.invalidComponent(
-                "Invalid registered name: \(stringValue)"
-            )
+        // Validate registered name characters at byte level
+        for byte in bytes {
+            // unreserved: ALPHA / DIGIT / "-" / "." / "_" / "~"
+            // sub-delims: "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
+            // plus percent-encoding "%"
+            let isUnreserved = byte.ascii.isLetter || byte.ascii.isDigit
+                || byte == 0x2D || byte == 0x2E || byte == 0x5F || byte == 0x7E  // - . _ ~
+            let isSubDelim = byte == 0x21 || byte == 0x24 || byte == 0x26 || byte == 0x27  // ! $ & '
+                || byte == 0x28 || byte == 0x29 || byte == 0x2A || byte == 0x2B  // ( ) * +
+                || byte == 0x2C || byte == 0x3B || byte == 0x3D  // , ; =
+            let isPercent = byte == 0x25  // %
+
+            guard isUnreserved || isSubDelim || isPercent else {
+                throw Error.invalidCharacter(
+                    string,
+                    byte: byte,
+                    reason: "Only unreserved, sub-delims, and percent-encoded allowed in registered name"
+                )
+            }
         }
 
         // Normalize to lowercase per RFC 3986 Section 6.2.2.1
-        self = .registeredName(stringValue.lowercased())
+        self = .registeredName(string.lowercased())
     }
 
-    /// Creates a host without validation
-    ///
-    /// This is an internal optimization for static constants and validated values.
-    ///
-    /// - Parameter value: The host in the appropriate form (must be valid, not validated)
-    /// - Warning: This skips validation. For public use, use `try!` with
-    ///   the throwing initializer to make the risk explicit.
-    internal static func unchecked(_ string: String) -> Self {
-        if string.hasPrefix("[") && string.hasSuffix("]") {
-            return .ipv6(String(string.dropFirst().dropLast()))
-        } else if isValidIPv4(string) {
-            return .ipv4(string)
-        } else {
-            return .registeredName(string.lowercased())
+    /// Validates if bytes represent a valid IPv4 address
+    private static func isValidIPv4Bytes<Bytes: Collection>(_ bytes: Bytes) -> Bool
+    where Bytes.Element == UInt8 {
+        var octetCount = 0
+        var currentOctet: UInt16 = 0
+        var digitCount = 0
+
+        for byte in bytes {
+            if byte == 0x2E {  // '.'
+                guard digitCount > 0 && currentOctet <= 255 else { return false }
+                // Check for leading zeros
+                if digitCount > 1 && currentOctet < 10 { return false }
+                if digitCount > 2 && currentOctet < 100 { return false }
+
+                octetCount += 1
+                currentOctet = 0
+                digitCount = 0
+            } else if byte.ascii.isDigit {
+                let digit = UInt16(byte) - 0x30
+                currentOctet = currentOctet * 10 + digit
+                digitCount += 1
+                if currentOctet > 255 || digitCount > 3 {
+                    return false
+                }
+            } else {
+                return false
+            }
         }
+
+        // Validate final octet
+        guard digitCount > 0 && currentOctet <= 255 else { return false }
+        if digitCount > 1 && currentOctet < 10 { return false }
+        if digitCount > 2 && currentOctet < 100 { return false }
+
+        octetCount += 1
+        return octetCount == 4
+    }
+}
+
+// MARK: - Byte Serialization
+
+extension [UInt8] {
+    /// Creates ASCII byte representation of an RFC 3986 URI host
+    ///
+    /// This is the canonical serialization of hosts to bytes.
+    ///
+    /// ## Category Theory
+    ///
+    /// This is the most universal serialization (natural transformation):
+    /// - **Domain**: RFC_3986.URI.Host (structured data)
+    /// - **Codomain**: [UInt8] (ASCII bytes)
+    ///
+    /// - Parameter host: The host to serialize
+    public init(_ host: RFC_3986.URI.Host) {
+        switch host {
+        case .ipv4(let address):
+            self = Array(address.utf8)
+        case .ipv6(let address):
+            // Wrap in brackets for serialization
+            var bytes: [UInt8] = [0x5B]  // '['
+            bytes.append(contentsOf: address.utf8)
+            bytes.append(0x5D)  // ']'
+            self = bytes
+        case .registeredName(let name):
+            self = Array(name.utf8)
+        }
+    }
+}
+
+// MARK: - CustomStringConvertible
+
+extension RFC_3986.URI.Host: CustomStringConvertible {
+    public var description: String {
+        rawValue
     }
 }
 
@@ -131,54 +237,6 @@ extension RFC_3986.URI.Host {
         case .registeredName(let name):
             return name == "localhost"
         }
-    }
-}
-
-// MARK: - Validation Helpers
-
-extension RFC_3986.URI.Host {
-    /// Validates if a string is a valid IPv4 address
-    private static func isValidIPv4(_ string: String) -> Bool {
-        let octets = string.split(separator: ".")
-        guard octets.count == 4 else { return false }
-
-        return octets.allSatisfy { octet in
-            guard UInt8(octet) != nil else { return false }
-            // Check for leading zeros (not allowed except for "0")
-            if octet.count > 1 && octet.first == "0" {
-                return false
-            }
-            return true
-        }
-    }
-
-    /// Validates if a string is a valid IPv6 address (basic validation)
-    ///
-    /// This is a simplified validation. Full IPv6 validation is complex.
-    private static func isValidIPv6(_ string: String) -> Bool {
-        // Very basic IPv6 validation
-        // Full validation would require much more complexity
-        let validChars: Set<Character> = Set("0123456789abcdefABCDEF:")
-        return string.allSatisfy { validChars.contains($0) }
-            && string.contains(":")
-    }
-
-    /// Validates if a string is a valid registered name per RFC 3986
-    ///
-    /// reg-name = *( unreserved / pct-encoded / sub-delims )
-    private static func isValidRegisteredName(_ string: String) -> Bool {
-        // Allow unreserved chars, percent-encoded, and sub-delims
-        let validChars = RFC_3986.CharacterSet.host.union(.init(Set(["%"])))
-
-        return string.allSatisfy { validChars.contains($0) }
-    }
-}
-
-// MARK: - CustomStringConvertible
-
-extension RFC_3986.URI.Host: CustomStringConvertible {
-    public var description: String {
-        rawValue
     }
 }
 
