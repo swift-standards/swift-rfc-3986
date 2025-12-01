@@ -71,7 +71,7 @@ extension RFC_3986.URI.Host: UInt8.ASCII.Serializable {
     public static func serialize<Buffer>(
         ascii host: RFC_3986.URI.Host,
         into buffer: inout Buffer
-    ) where Buffer : RangeReplaceableCollection, Buffer.Element == UInt8 {
+    ) where Buffer: RangeReplaceableCollection, Buffer.Element == UInt8 {
         switch host {
         case .ipv4(let address):
             buffer.append(ascii: address)
@@ -184,9 +184,11 @@ extension RFC_3986.URI.Host: UInt8.ASCII.Serializable {
             // unreserved: ALPHA / DIGIT / "-" / "." / "_" / "~"
             // sub-delims: "!" / "$" / "&" / "'" / "(" / ")" / "*" / "+" / "," / ";" / "="
             // plus percent-encoding "%"
-            let isUnreserved = byte.ascii.isLetter || byte.ascii.isDigit
+            let isUnreserved =
+                byte.ascii.isLetter || byte.ascii.isDigit
                 || byte == 0x2D || byte == 0x2E || byte == 0x5F || byte == 0x7E  // - . _ ~
-            let isSubDelim = byte == 0x21 || byte == 0x24 || byte == 0x26 || byte == 0x27  // ! $ & '
+            let isSubDelim =
+                byte == 0x21 || byte == 0x24 || byte == 0x26 || byte == 0x27  // ! $ & '
                 || byte == 0x28 || byte == 0x29 || byte == 0x2A || byte == 0x2B  // ( ) * +
                 || byte == 0x2C || byte == 0x3B || byte == 0x3D  // , ; =
             let isPercent = byte == 0x25  // %
@@ -195,7 +197,8 @@ extension RFC_3986.URI.Host: UInt8.ASCII.Serializable {
                 throw Error.invalidCharacter(
                     string,
                     byte: byte,
-                    reason: "Only unreserved, sub-delims, and percent-encoded allowed in registered name"
+                    reason:
+                        "Only unreserved, sub-delims, and percent-encoded allowed in registered name"
                 )
             }
         }

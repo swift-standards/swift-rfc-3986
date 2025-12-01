@@ -74,7 +74,7 @@ extension RFC_3986.URI.Path: UInt8.ASCII.Serializable {
     public static func serialize<Buffer>(
         ascii path: RFC_3986.URI.Path,
         into buffer: inout Buffer
-    ) where Buffer : RangeReplaceableCollection, Buffer.Element == UInt8 {
+    ) where Buffer: RangeReplaceableCollection, Buffer.Element == UInt8 {
         if path.isAbsolute {
             buffer.append(.ascii.solidus)
         }
@@ -86,7 +86,7 @@ extension RFC_3986.URI.Path: UInt8.ASCII.Serializable {
             buffer.append(contentsOf: segment.utf8)
         }
     }
-    
+
     /// Parses path from ASCII bytes (CANONICAL PRIMITIVE)
     ///
     /// This is the primitive parser that works at the byte level.

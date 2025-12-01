@@ -97,7 +97,8 @@ extension RFC_3986.URI.Scheme: UInt8.ASCII.Serializable {
         }
 
         for byte in bytes.dropFirst() {
-            let valid = byte.ascii.isLetter
+            let valid =
+                byte.ascii.isLetter
                 || byte.ascii.isDigit
                 || byte == .ascii.plusSign
                 || byte == .ascii.hyphen
@@ -120,7 +121,6 @@ extension RFC_3986.URI.Scheme: UInt8.ASCII.Serializable {
 
 extension RFC_3986.URI.Scheme: UInt8.ASCII.RawRepresentable {}
 extension RFC_3986.URI.Scheme: CustomStringConvertible {}
-
 
 // MARK: - Common Schemes
 

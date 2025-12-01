@@ -340,10 +340,10 @@ extension RFC_3986 {
         var iterator = bytes.makeIterator()
         while let byte = iterator.next() {
             if byte == UInt8(ascii: "%"),
-               let hi = iterator.next(),
-               let lo = iterator.next(),
-               let hiVal = hexDigitValue(hi),
-               let loVal = hexDigitValue(lo)
+                let hi = iterator.next(),
+                let lo = iterator.next(),
+                let hiVal = hexDigitValue(hi),
+                let loVal = hexDigitValue(lo)
             {
                 result.append((hiVal << 4) | loVal)
             } else {

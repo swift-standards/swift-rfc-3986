@@ -265,7 +265,7 @@ extension RFC_3986.URI: UInt8.ASCII.Serializable {
     static public func serialize<Buffer>(
         ascii uri: RFC_3986.URI,
         into buffer: inout Buffer
-    ) where Buffer : RangeReplaceableCollection, Buffer.Element == UInt8 {
+    ) where Buffer: RangeReplaceableCollection, Buffer.Element == UInt8 {
         buffer.append(contentsOf: uri.value.utf8)
     }
 

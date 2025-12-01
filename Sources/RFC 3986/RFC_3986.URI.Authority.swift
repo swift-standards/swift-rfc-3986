@@ -77,7 +77,11 @@ extension RFC_3986.URI {
         ///   - userinfo: Optional user information
         ///   - host: The host component
         ///   - port: Optional port number
-        public init(userinfo: RFC_3986.URI.Userinfo? = nil, host: RFC_3986.URI.Host, port: RFC_3986.URI.Port? = nil) {
+        public init(
+            userinfo: RFC_3986.URI.Userinfo? = nil,
+            host: RFC_3986.URI.Host,
+            port: RFC_3986.URI.Port? = nil
+        ) {
             self.init(__unchecked: (), userinfo: userinfo, host: host, port: port)
         }
     }
@@ -89,7 +93,7 @@ extension RFC_3986.URI.Authority: UInt8.ASCII.Serializable {
     public static func serialize<Buffer>(
         ascii authority: RFC_3986.URI.Authority,
         into buffer: inout Buffer
-    ) where Buffer : RangeReplaceableCollection, Buffer.Element == UInt8 {
+    ) where Buffer: RangeReplaceableCollection, Buffer.Element == UInt8 {
         if let userinfo = authority.userinfo {
             buffer.append(contentsOf: userinfo.rawValue.utf8)
             buffer.append(.ascii.commercialAt)  // @

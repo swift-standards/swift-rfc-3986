@@ -40,7 +40,8 @@ extension RFC_3986.URI.Port.Error: CustomStringConvertible {
         case .empty:
             return "Port cannot be empty"
         case .invalidCharacter(let value, let byte):
-            return "Port '\(value)' contains invalid byte 0x\(String(byte, radix: 16)): only digits allowed"
+            return
+                "Port '\(value)' contains invalid byte 0x\(String(byte, radix: 16)): only digits allowed"
         case .overflow(let value):
             return "Port '\(value)' overflows maximum value of 65535"
         }

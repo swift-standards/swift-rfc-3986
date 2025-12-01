@@ -42,16 +42,16 @@ extension RFC_3986.URI {
     public struct Query: Sendable, Codable, Hashable, Equatable {
         /// RawValue type for RawRepresentable conformance
         public typealias RawValue = String
-        
+
         /// The raw query string
         public let rawValue: String
-        
+
         /// The query parameters as an array of key-value pairs
         ///
         /// Uses an array to preserve order and allow duplicate keys.
         /// Values can be nil to support keys without values (e.g., "flag" in "?flag&other=value")
         public let parameters: [(key: String, value: String?)]
-        
+
         /// Creates a query WITHOUT validation
         ///
         /// **Warning**: Bypasses RFC 3986 validation.
@@ -109,12 +109,12 @@ extension RFC_3986.URI.Query: UInt8.ASCII.Serializable {
             self.init(__unchecked: (), rawValue: "", parameters: [])
             return
         }
-        
+
         // Validate query characters at byte level
         var i = bytes.startIndex
         while i < bytes.endIndex {
             let byte = bytes[i]
-            
+
             // Check for percent-encoding
             if byte == 0x25 {  // '%'
                 let next1 = bytes.index(after: i)
@@ -131,18 +131,18 @@ extension RFC_3986.URI.Query: UInt8.ASCII.Serializable {
                         reason: "'%' must be followed by 2 hex digits"
                     )
                 }
-                
+
                 guard bytes[next1].ascii.isHexDigit && bytes[next2].ascii.isHexDigit else {
                     throw Error.invalidPercentEncoding(
                         String(decoding: bytes, as: UTF8.self),
                         reason: "Invalid hex digits after '%'"
                     )
                 }
-                
+
                 i = bytes.index(after: next2)
                 continue
             }
-            
+
             // Check for newlines (invalid in queries)
             if byte == 0x0A || byte == 0x0D {
                 throw Error.invalidCharacter(
@@ -151,7 +151,7 @@ extension RFC_3986.URI.Query: UInt8.ASCII.Serializable {
                     reason: "Query cannot contain newlines"
                 )
             }
-            
+
             // Check for hash (invalid in queries - separates fragment)
             if byte == 0x23 {  // '#'
                 throw Error.invalidCharacter(
@@ -160,26 +160,26 @@ extension RFC_3986.URI.Query: UInt8.ASCII.Serializable {
                     reason: "Query cannot contain '#' (use for fragment instead)"
                 )
             }
-            
+
             i = bytes.index(after: i)
         }
-        
+
         let queryString = String(decoding: bytes, as: UTF8.self)
-        
+
         // Parse parameters
         let pairs = queryString.split(separator: "&", omittingEmptySubsequences: false)
         var parameters: [(String, String?)] = []
-        
+
         for pair in pairs {
             if let equalIndex = pair.firstIndex(of: "=") {
                 let key = String(pair[..<equalIndex])
                 let value = String(pair[pair.index(after: equalIndex)...])
-                
+
                 // Validate key is not empty
                 guard !key.isEmpty else {
                     throw Error.emptyKey
                 }
-                
+
                 parameters.append((key, value))
             } else {
                 // Key without value
@@ -190,7 +190,7 @@ extension RFC_3986.URI.Query: UInt8.ASCII.Serializable {
                 parameters.append((key, nil))
             }
         }
-        
+
         self.init(__unchecked: (), rawValue: queryString, parameters: parameters)
     }
 }
@@ -208,7 +208,7 @@ extension RFC_3986.URI.Query {
     /// Uses an array to preserve order and allow duplicate keys.
     /// Values can be nil to support keys without values (e.g., "flag" in "?flag&other=value")
     private var _legacyParameters: [(key: String, value: String?)] { parameters }
-    
+
     /// Creates a query from an array of parameters
     ///
     /// - Parameter parameters: The query parameters
@@ -222,11 +222,11 @@ extension RFC_3986.URI.Query {
                 return key
             }
         }.joined(separator: "&")
-        
+
         // Use byte parser for validation
         try self.init(ascii: Array(queryString.utf8))
     }
-    
+
     /// Creates a query without validation
     ///
     /// This is an internal optimization for static constants and validated values.
@@ -244,7 +244,7 @@ extension RFC_3986.URI.Query {
         }.joined(separator: "&")
         self.init(__unchecked: (), rawValue: queryString, parameters: parameters)
     }
-    
+
     /// The string representation of the query
     ///
     /// Returns the query in the form "key1=value1&key2=value2" (without leading "?").
@@ -258,17 +258,17 @@ extension RFC_3986.URI.Query {
             }
         }.joined(separator: "&")
     }
-    
+
     /// Returns true if the query has no parameters
     public var isEmpty: Bool {
         parameters.isEmpty
     }
-    
+
     /// The number of parameters
     public var count: Int {
         parameters.count
     }
-    
+
     /// Gets all values for a given key
     ///
     /// - Parameter key: The parameter key to look up
@@ -276,7 +276,7 @@ extension RFC_3986.URI.Query {
     public subscript(key: String) -> [String?] {
         parameters.filter { $0.key == key }.map { $0.value }
     }
-    
+
     /// Gets the first value for a given key
     ///
     /// - Parameter key: The parameter key to look up
@@ -284,7 +284,7 @@ extension RFC_3986.URI.Query {
     public func first(for key: some StringProtocol) -> String? {
         parameters.first { $0.key == key }?.value ?? nil
     }
-    
+
     /// Adds a parameter to the query
     ///
     /// - Parameters:
@@ -300,7 +300,7 @@ extension RFC_3986.URI.Query {
         newParameters.append((String(key), value.map { String($0) }))
         return try RFC_3986.URI.Query(newParameters)
     }
-    
+
     /// Returns a new query with all parameters for a given key removed
     ///
     /// - Parameter key: The parameter key to remove
@@ -309,32 +309,31 @@ extension RFC_3986.URI.Query {
         let filtered = parameters.filter { $0.key != key }
         return RFC_3986.URI.Query(unchecked: filtered)
     }
-    
+
     /// All unique keys in the query
     public var keys: Set<String> {
         Set(parameters.map { $0.key })
     }
 }
 
-
 // MARK: - Collection
 
 extension RFC_3986.URI.Query: Collection {
     public typealias Index = Array<(key: String, value: String?)>.Index
     public typealias Element = (key: String, value: String?)
-    
+
     public var startIndex: Index {
         parameters.startIndex
     }
-    
+
     public var endIndex: Index {
         parameters.endIndex
     }
-    
+
     public subscript(position: Index) -> Element {
         parameters[position]
     }
-    
+
     public func index(after i: Index) -> Index {
         parameters.index(after: i)
     }
@@ -377,11 +376,11 @@ extension RFC_3986.URI.Query {
     public func hash(into hasher: inout Hasher) {
         hasher.combine(rawValue)
     }
-    
+
     public static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.rawValue == rhs.rawValue
     }
-    
+
     public static func == (lhs: Self, rhs: String) -> Bool {
         lhs.rawValue == rhs
     }
@@ -402,7 +401,7 @@ extension RFC_3986.URI.Query {
             )
         }
     }
-    
+
     public func encode(to encoder: any Encoder) throws {
         var container = encoder.singleValueContainer()
         try container.encode(rawValue)
