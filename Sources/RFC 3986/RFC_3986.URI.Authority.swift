@@ -89,7 +89,7 @@ extension RFC_3986.URI {
 
 // MARK: - Serializable
 
-extension RFC_3986.URI.Authority: UInt8.ASCII.Serializable {
+extension RFC_3986.URI.Authority: Binary.ASCII.Serializable {
     public static func serialize<Buffer>(
         ascii authority: RFC_3986.URI.Authority,
         into buffer: inout Buffer

@@ -64,7 +64,7 @@ extension RFC_3986.URI {
 
 // MARK: - Serializable
 
-extension RFC_3986.URI.Userinfo: UInt8.ASCII.Serializable {
+extension RFC_3986.URI.Userinfo: Binary.ASCII.Serializable {
     /// Serialize userinfo to ASCII bytes
     public static func serialize<Buffer: RangeReplaceableCollection>(
         ascii userinfo: Self,
@@ -159,7 +159,7 @@ extension RFC_3986.URI.Userinfo: UInt8.ASCII.Serializable {
 
 // MARK: - Protocol Conformances
 
-extension RFC_3986.URI.Userinfo: UInt8.ASCII.RawRepresentable {}
+extension RFC_3986.URI.Userinfo: Binary.ASCII.RawRepresentable {}
 extension RFC_3986.URI.Userinfo: CustomStringConvertible {}
 
 // MARK: - Convenience Properties

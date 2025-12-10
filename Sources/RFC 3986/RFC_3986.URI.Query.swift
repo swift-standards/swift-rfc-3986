@@ -74,7 +74,7 @@ extension RFC_3986.URI {
 
 // MARK: - Serializable
 
-extension RFC_3986.URI.Query: UInt8.ASCII.Serializable {
+extension RFC_3986.URI.Query: Binary.ASCII.Serializable {
     /// Serialize query to ASCII bytes
     public static func serialize<Buffer: RangeReplaceableCollection>(
         ascii query: Self,
@@ -197,7 +197,7 @@ extension RFC_3986.URI.Query: UInt8.ASCII.Serializable {
 
 // MARK: - Protocol Conformances
 
-extension RFC_3986.URI.Query: UInt8.ASCII.RawRepresentable {}
+extension RFC_3986.URI.Query: Binary.ASCII.RawRepresentable {}
 extension RFC_3986.URI.Query: CustomStringConvertible {}
 
 // MARK: - Public Initializers

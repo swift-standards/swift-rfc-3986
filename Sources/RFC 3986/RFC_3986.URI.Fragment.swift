@@ -63,7 +63,7 @@ extension RFC_3986.URI {
 
 // MARK: - Serializable
 
-extension RFC_3986.URI.Fragment: UInt8.ASCII.Serializable {
+extension RFC_3986.URI.Fragment: Binary.ASCII.Serializable {
     public static func serialize<Buffer: RangeReplaceableCollection>(
         ascii fragment: RFC_3986.URI.Fragment,
         into buffer: inout Buffer
@@ -112,7 +112,7 @@ extension RFC_3986.URI.Fragment: UInt8.ASCII.Serializable {
 
 // MARK: - Protocol Conformances
 
-extension RFC_3986.URI.Fragment: UInt8.ASCII.RawRepresentable {}
+extension RFC_3986.URI.Fragment: Binary.ASCII.RawRepresentable {}
 extension RFC_3986.URI.Fragment: CustomStringConvertible {}
 
 // MARK: - Convenience Properties

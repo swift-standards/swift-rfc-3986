@@ -70,7 +70,7 @@ extension RFC_3986.URI {
 
 // MARK: - Serializable
 
-extension RFC_3986.URI.Path: UInt8.ASCII.Serializable {
+extension RFC_3986.URI.Path: Binary.ASCII.Serializable {
     public static func serialize<Buffer>(
         ascii path: RFC_3986.URI.Path,
         into buffer: inout Buffer

@@ -79,23 +79,23 @@ struct `Developer Delight - Convenience APIs` {
     @Test
     func `appendingPathComponent()`() throws {
         let base = try RFC_3986.URI("https://example.com/path")
-        let appended = try base.appendingPathComponent("file.txt")
+        let appended = base.appendingPathComponent("file.txt")
         #expect(appended.value == "https://example.com/path/file.txt")
 
         // With trailing slash
         let baseWithSlash = try RFC_3986.URI("https://example.com/path/")
-        let appendedWithSlash = try baseWithSlash.appendingPathComponent("file.txt")
+        let appendedWithSlash = baseWithSlash.appendingPathComponent("file.txt")
         #expect(appendedWithSlash.value == "https://example.com/path/file.txt")
     }
 
     @Test
     func `appendingQueryItem()`() throws {
         let base = try RFC_3986.URI("https://example.com/path")
-        let withQuery = try base.appendingQueryItem(name: "key", value: "value")
+        let withQuery = base.appendingQueryItem(name: "key", value: "value")
         #expect(withQuery.query?.string.contains("key=value") == true)
 
         // Append another
-        let withTwoQueries = try withQuery.appendingQueryItem(name: "foo", value: "bar")
+        let withTwoQueries = withQuery.appendingQueryItem(name: "foo", value: "bar")
         #expect(withTwoQueries.query?.string.contains("key=value") == true)
         #expect(withTwoQueries.query?.string.contains("foo=bar") == true)
     }
@@ -103,11 +103,11 @@ struct `Developer Delight - Convenience APIs` {
     @Test
     func `settingFragment()`() throws {
         let base = try RFC_3986.URI("https://example.com/path")
-        let withFragment = try base.settingFragment(try! RFC_3986.URI.Fragment("section"))
+        let withFragment = base.settingFragment(try! RFC_3986.URI.Fragment("section"))
         #expect(withFragment.fragment?.value == "section")
 
         // Replace existing fragment
-        let replaced = try withFragment.settingFragment(try! RFC_3986.URI.Fragment("other"))
+        let replaced = withFragment.settingFragment(try! RFC_3986.URI.Fragment("other"))
         #expect(replaced.fragment?.value == "other")
     }
 }

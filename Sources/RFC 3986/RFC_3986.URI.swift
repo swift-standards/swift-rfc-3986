@@ -261,7 +261,7 @@ extension RFC_3986.URI {
 
 // MARK: - Serializable
 
-extension RFC_3986.URI: UInt8.ASCII.Serializable {
+extension RFC_3986.URI: Binary.ASCII.Serializable {
     static public func serialize<Buffer>(
         ascii uri: RFC_3986.URI,
         into buffer: inout Buffer

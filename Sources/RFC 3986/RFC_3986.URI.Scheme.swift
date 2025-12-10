@@ -53,7 +53,7 @@ extension RFC_3986.URI {
 
 // MARK: - Serializable
 
-extension RFC_3986.URI.Scheme: UInt8.ASCII.Serializable {
+extension RFC_3986.URI.Scheme: Binary.ASCII.Serializable {
     /// Serialize scheme to ASCII bytes
     public static func serialize<Buffer: RangeReplaceableCollection>(
         ascii scheme: Self,
@@ -119,7 +119,7 @@ extension RFC_3986.URI.Scheme: UInt8.ASCII.Serializable {
 
 // MARK: - Protocol Conformances
 
-extension RFC_3986.URI.Scheme: UInt8.ASCII.RawRepresentable {}
+extension RFC_3986.URI.Scheme: Binary.ASCII.RawRepresentable {}
 extension RFC_3986.URI.Scheme: CustomStringConvertible {}
 
 // MARK: - Common Schemes

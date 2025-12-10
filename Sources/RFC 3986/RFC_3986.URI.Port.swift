@@ -44,7 +44,7 @@ extension RFC_3986.URI {
 
 // MARK: - Serializable
 
-extension RFC_3986.URI.Port: UInt8.ASCII.Serializable {
+extension RFC_3986.URI.Port: Binary.ASCII.Serializable {
     static public func serialize<Buffer>(
         ascii port: RFC_3986.URI.Port,
         into buffer: inout Buffer
@@ -100,7 +100,7 @@ extension RFC_3986.URI.Port: UInt8.ASCII.Serializable {
 
 // MARK: - Protocol Conformances
 
-extension RFC_3986.URI.Port: UInt8.ASCII.RawRepresentable {
+extension RFC_3986.URI.Port: Binary.ASCII.RawRepresentable {
     /// RawValue type for RawRepresentable conformance
     public typealias RawValue = UInt16
 
