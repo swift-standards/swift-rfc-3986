@@ -234,7 +234,7 @@ extension RFC_3986.URI.Host {
             // IPv4 loopback: 127.0.0.0/8 (any 127.x.x.x)
             return address.octets.0 == 127
         case .ipv6(let scopedAddress):
-            return scopedAddress.address.isLoopback
+            return scopedAddress.address.is.loopback
         case .registeredName(let name):
             return name == "localhost"
         }
