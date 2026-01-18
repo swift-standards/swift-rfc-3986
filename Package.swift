@@ -17,10 +17,10 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/swift-primitives/swift-standard-library-extensions.git", from: "0.0.1"),
-        .package(url: "https://github.com/swift-foundations/swift-ascii.git", from: "0.0.1"),
-        .package(url: "https://github.com/swift-standards/swift-ipv4-standard.git", from: "0.0.1"),
-        .package(url: "https://github.com/swift-standards/swift-ipv6-standard.git", from: "0.0.1"),
+        .package(path: "../../swift-primitives/swift-standard-library-extensions"),
+        .package(path: "../../swift-foundations/swift-ascii"),
+        .package(path: "../swift-ipv4-standard"),
+        .package(path: "../swift-ipv6-standard"),
     ],
     targets: [
         .target(
