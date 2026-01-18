@@ -20,7 +20,7 @@ let package = Package(
         .package(path: "../../swift-primitives/swift-standard-library-extensions"),
         .package(path: "../../swift-foundations/swift-ascii"),
         .package(path: "../swift-ipv4-standard"),
-        .package(path: "../swift-ipv6-standard"),
+        .package(path: "../swift-ipv6-standard")
     ],
     targets: [
         .target(
@@ -29,12 +29,8 @@ let package = Package(
                 .product(name: "Standard Library Extensions", package: "swift-standard-library-extensions"),
                 .product(name: "ASCII", package: "swift-ascii"),
                 .product(name: "IPv4 Standard", package: "swift-ipv4-standard"),
-                .product(name: "IPv6 Standard", package: "swift-ipv6-standard"),
+                .product(name: "IPv6 Standard", package: "swift-ipv6-standard")
             ]
-        ),
-        .testTarget(
-            name: "RFC 3986".tests,
-            dependencies: ["RFC 3986"]
         )
     ],
     swiftLanguageModes: [.v6]
