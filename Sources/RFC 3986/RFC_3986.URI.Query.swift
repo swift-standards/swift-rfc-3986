@@ -166,30 +166,38 @@ extension RFC_3986.URI.Query: Binary.ASCII.Serializable {
 
         let queryString = String(decoding: bytes, as: UTF8.self)
 
-        // Parse parameters
-        let pairs = queryString.split(separator: "&", omittingEmptySubsequences: false)
+        // Parse parameters by scanning for '&' and '=' at byte level
+        let byteArray = Array(bytes)
         var parameters: [(String, String?)] = []
+        var pairStart = 0
 
-        for pair in pairs {
-            if let equalIndex = pair.firstIndex(of: "=") {
-                let key = String(pair[..<equalIndex])
-                let value = String(pair[pair.index(after: equalIndex)...])
+        func parsePair(_ lo: Int, _ hi: Int) throws(Error) {
+            // Find '=' within this pair
+            var eqIdx: Int? = nil
+            for j in lo..<hi where byteArray[j] == 0x3D {
+                eqIdx = j
+                break
+            }
 
-                // Validate key is not empty
-                guard !key.isEmpty else {
-                    throw Error.emptyKey
-                }
-
+            if let eq = eqIdx {
+                let key = String(decoding: byteArray[lo..<eq], as: UTF8.self)
+                guard !key.isEmpty else { throw Error.emptyKey }
+                let value = String(decoding: byteArray[(eq &+ 1)..<hi], as: UTF8.self)
                 parameters.append((key, value))
             } else {
-                // Key without value
-                let key = String(pair)
-                guard !key.isEmpty else {
-                    throw Error.emptyKey
-                }
+                let key = String(decoding: byteArray[lo..<hi], as: UTF8.self)
+                guard !key.isEmpty else { throw Error.emptyKey }
                 parameters.append((key, nil))
             }
         }
+
+        for idx in 0..<byteArray.count {
+            if byteArray[idx] == 0x26 {  // '&'
+                try parsePair(pairStart, idx)
+                pairStart = idx &+ 1
+            }
+        }
+        try parsePair(pairStart, byteArray.count)
 
         self.init(__unchecked: (), rawValue: queryString, parameters: parameters)
     }
