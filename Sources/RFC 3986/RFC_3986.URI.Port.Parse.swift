@@ -1,5 +1,5 @@
 //
-//  RFC_3986.Parse.Port.swift
+//  RFC_3986.URI.Port.Parse.swift
 //  swift-rfc-3986
 //
 //  URI port: *DIGIT → UInt16
@@ -7,29 +7,29 @@
 
 public import Parser_Primitives
 
-extension RFC_3986.Parse {
+extension RFC_3986.URI.Port {
     /// Parses a URI port number per RFC 3986 Section 3.2.3.
     ///
     /// `port = *DIGIT`
     ///
     /// Requires at least one digit. Returns the port as a UInt16.
-    public struct Port<Input: Collection.Slice.`Protocol`>: Sendable
+    public struct Parse<Input: Collection.Slice.`Protocol`>: Sendable
     where Input: Sendable, Input.Element == UInt8 {
         @inlinable
         public init() {}
     }
 }
 
-extension RFC_3986.Parse.Port {
+extension RFC_3986.URI.Port.Parse {
     public enum Error: Swift.Error, Sendable, Equatable {
         case expectedDigit
         case overflow
     }
 }
 
-extension RFC_3986.Parse.Port: Parser.`Protocol` {
+extension RFC_3986.URI.Port.Parse: Parser.`Protocol` {
     public typealias ParseOutput = UInt16
-    public typealias Failure = RFC_3986.Parse.Port<Input>.Error
+    public typealias Failure = RFC_3986.URI.Port.Parse<Input>.Error
 
     @inlinable
     public func parse(_ input: inout Input) throws(Failure) -> UInt16 {

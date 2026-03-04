@@ -1,5 +1,5 @@
 //
-//  RFC_3986.Parse.Authority.swift
+//  RFC_3986.URI.Authority.Parse.swift
 //  swift-rfc-3986
 //
 //  URI authority: [ userinfo "@" ] host [ ":" port ]
@@ -7,21 +7,21 @@
 
 public import Parser_Primitives
 
-extension RFC_3986.Parse {
+extension RFC_3986.URI.Authority {
     /// Parses a URI authority per RFC 3986 Section 3.2.
     ///
     /// `authority = [ userinfo "@" ] host [ ":" port ]`
     ///
     /// Detects userinfo by scanning for `@` within the authority boundary.
     /// Returns structured output with optional userinfo, host slice, and optional port.
-    public struct Authority<Input: Collection.Slice.`Protocol`>: Sendable
+    public struct Parse<Input: Collection.Slice.`Protocol`>: Sendable
     where Input: Sendable, Input.Element == UInt8 {
         @inlinable
         public init() {}
     }
 }
 
-extension RFC_3986.Parse.Authority {
+extension RFC_3986.URI.Authority.Parse {
     public struct Output: Sendable {
         public let userinfo: Input?
         public let host: Input
@@ -41,9 +41,9 @@ extension RFC_3986.Parse.Authority {
     }
 }
 
-extension RFC_3986.Parse.Authority: Parser.`Protocol` {
+extension RFC_3986.URI.Authority.Parse: Parser.`Protocol` {
     public typealias ParseOutput = Output
-    public typealias Failure = RFC_3986.Parse.Authority<Input>.Error
+    public typealias Failure = RFC_3986.URI.Authority.Parse<Input>.Error
 
     @inlinable
     public func parse(_ input: inout Input) throws(Failure) -> Output {
