@@ -29,7 +29,6 @@ let package = Package(
             dependencies: [
                 .product(name: "Standard Library Extensions", package: "swift-standard-library-extensions"),
                 .product(name: "Parser Primitives", package: "swift-parser-primitives"),
-                .product(name: "Parser ASCII Integer Primitives", package: "swift-parser-primitives"),
                 .product(name: "ASCII", package: "swift-ascii"),
                 .product(name: "IPv4 Standard", package: "swift-ipv4-standard"),
                 .product(name: "IPv6 Standard", package: "swift-ipv6-standard")

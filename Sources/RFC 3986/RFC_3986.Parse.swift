@@ -6,7 +6,6 @@
 //
 
 import Parser_Primitives
-import Parser_ASCII_Integer_Primitives
 
 extension RFC_3986 {
     public enum Parse {}
