@@ -20,8 +20,8 @@ let package = Package(
         .package(path: "../../swift-primitives/swift-standard-library-extensions"),
         .package(path: "../../swift-primitives/swift-parser-primitives"),
         .package(path: "../../swift-foundations/swift-ascii"),
-        .package(path: "../swift-ipv4-standard"),
-        .package(path: "../swift-ipv6-standard")
+        .package(path: "../../swift-standards/swift-ipv4-standard"),
+        .package(path: "../../swift-standards/swift-ipv6-standard")
     ],
     targets: [
         .target(
